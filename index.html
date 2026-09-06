@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DroneMap AI | SVAMITVA Precision</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+    <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { margin: 0; background-color: #000; font-family: 'Inter', sans-serif; color: #fff; overflow-x: hidden; }
+        #map { height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; z-index: 10; }
+        
+        .view-section { display: none; opacity: 0; transition: opacity 0.5s ease-in-out; }
+        .view-active { display: flex; opacity: 1; }
+        .scrollable-view { position: relative; min-height: 100vh; width: 100vw; z-index: 50; }
+        
+        .glass-panel { background: rgba(10, 10, 10, 0.95); backdrop-filter: blur(25px); border-right: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 10px 0 40px rgba(0,0,0,0.8); }
+        
+        .custom-popup .leaflet-popup-content-wrapper { background: #0f1115; color: #fff; border: 1px solid #1f2937; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.9); padding: 4px; }
+        .custom-popup .leaflet-popup-tip { background: #0f1115; border-bottom: 1px solid #1f2937; border-right: 1px solid #1f2937; }
+        .custom-popup .leaflet-popup-close-button { color: #9ca3af !important; margin-top: 8px; margin-right: 8px; transition: 0.2s; }
+        .custom-popup .leaflet-popup-close-button:hover { color: #fff !important; }
+
+        .video-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100vh; object-fit: cover; z-index: -2; }
+        .video-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0, 0, 0, 0.6); z-index: -1; }
+
+        .dropdown-content { display: none; position: absolute; right: 0; top: 40px; background: rgba(15, 15, 15, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; width: 240px; text-align: left; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .dropdown-content.show { display: block; }
+        .dropdown-item { padding: 14px 16px; font-size: 13px; color: #ddd; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
+        .dropdown-item:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .modal { display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        
+        .tab-btn { border-bottom: 2px solid transparent; color: #666; transition: 0.2s; }
+        .tab-btn.active { border-bottom: 2px solid #10b981; color: #fff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .leaflet-control-geocoder { background: #0f1115 !important; border: 1px solid #1f2937 !important; color: #fff !important; border-radius: 8px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important; }
+        .leaflet-control-geocoder-icon { filter: invert(1); }
+        .leaflet-control-geocoder-form input { color: #fff !important; background: transparent !important; }
+        .leaflet-control-geocoder-alternatives { background: #0f1115 !important; border-top: 1px solid #1f2937 !important; }
+        .leaflet-control-geocoder-alternatives li a { color: #ccc !important; }
+        .leaflet-control-geocoder-alternatives li a:hover { background: #1f2937 !important; color: #fff !important; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+        
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast-enter { animation: slideIn 0.3s forwards; }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col space-y-3 pointer-events-none"></div>
+
+    <div id="aboutModal" class="modal">
+        <div class="glass-panel border border-gray-800 p-10 w-full max-w-3xl rounded-2xl relative">
+            <button onclick="document.getElementById('aboutModal').classList.remove('show')" class="absolute top-6 right-6 text-gray-500 hover:text-white text-xl">✕</button>
+            <div class="flex items-center gap-4 mb-6">
+                <img src="my_logo.png" onerror="this.src='https://via.placeholder.com/50'" class="h-12 w-12 object-contain">
+                <div>
+                    <h2 class="text-2xl font-bold tracking-wide">The SVAMITVA Vision</h2>
+                    <p class="text-[10px] text-emerald-500 uppercase tracking-widest font-mono">Ministry of Panchayati Raj, Govt. of India</p>
+                </div>
+            </div>
+            <p class="text-gray-300 leading-relaxed mb-4">SVAMITVA (Survey of Villages Abadi and Mapping with Improvised Technology in Village Areas) is a Central Sector Scheme providing a clear record of ownership to rural estate owners.</p>
+            <p class="text-gray-300 leading-relaxed mb-8">DroneMap AI accelerates this mission. By replacing manual ground surveys with high-precision edge AI and manual GIS tools, we instantly draw boundaries from drone orthomosaics or satellite imagery and generate provisional property titles (Form 7) for rural citizens directly into the registry.</p>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-gray-900 p-5 rounded-lg border border-gray-800">
+                    <div class="text-emerald-400 mb-2 text-xl">🎯</div>
+                    <h3 class="font-bold text-white mb-1">AI & Manual Mapping</h3>
+                    <p class="text-xs text-gray-400">YOLOv8 instance segmentation or precise Turf.js geodesic polygon drawing.</p>
+                </div>
+                <div class="bg-gray-900 p-5 rounded-lg border border-gray-800">
+                    <div class="text-indigo-400 mb-2 text-xl">📄</div>
+                    <h3 class="font-bold text-white mb-1">Legal Form 7 Registry</h3>
+                    <p class="text-xs text-gray-400">Instantly generate cryptographically secure, QR-coded provisional property titles.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section id="landing-view" class="view-section view-active flex-col scrollable-view bg-black">
+        <div class="relative h-screen w-full flex flex-col items-center justify-center">
+            <video autoplay loop muted playsinline class="video-bg"><source src="drone_bg.mp4" type="video/mp4"></video>
+            <div class="video-overlay"></div>
+            
+            <nav class="absolute top-0 left-0 w-full px-8 py-6 flex justify-between items-center z-50">
+                <div class="flex items-center space-x-3">
+                    <img src="my_logo.png" onerror="this.src='https://via.placeholder.com/40'" class="h-10 w-10 object-contain rounded shadow-lg border border-white/10">
+                    <span class="text-white font-semibold tracking-widest text-sm uppercase hidden md:block">DroneMap AI</span>
+                </div>
+                <div class="flex items-center space-x-6 relative">
+                    <select class="bg-transparent text-white text-sm font-medium border-none outline-none cursor-pointer tracking-wider">
+                        <option class="text-black">EN</option>
+                    </select>
+                    <div class="relative">
+                        <svg onclick="document.getElementById('menuDropdown').classList.toggle('show')" class="w-8 h-8 text-white cursor-pointer hover:text-gray-300 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                        <div id="menuDropdown" class="dropdown-content">
+                            <div class="dropdown-item" onclick="document.getElementById('aboutModal').classList.add('show'); document.getElementById('menuDropdown').classList.remove('show');">
+                                <span>ℹ️</span> About SVAMITVA Engine
+                            </div>
+                            <div class="dropdown-item" onclick="showToast('API Documentation restricted to authorized Government IPs.', 'error')">
+                                <span>🔐</span> API Documentation
+                            </div>
+                            <div class="dropdown-item" onclick="showToast('Contacting local Panchayat portal...')">
+                                <span>✉️</span> Support & Helpdesk
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+            
+            <div class="relative z-20 flex flex-col items-center text-center px-4 mt-10">
+                <h1 class="text-5xl md:text-7xl font-semibold text-white tracking-tight leading-[1.1] mb-10 max-w-4xl drop-shadow-2xl">
+                    A cadastral engine<br>makes it precise.
+                </h1>
+                <button onclick="navigateTo('auth-view')" class="bg-white text-black font-bold tracking-widest text-[13px] px-12 py-4 hover:bg-gray-200 transition-colors uppercase rounded-sm shadow-[0_0_30px_rgba(255,255,255,0.3)]">
+                    Access Portal
+                </button>
+                <p class="mt-8 text-[15px] text-gray-300 font-light tracking-wide">Public registry & secure access for surveyors.</p>
+            </div>
+            
+            <div class="absolute bottom-10 z-20 flex flex-col items-center animate-bounce">
+                <span class="text-[10px] text-gray-400 tracking-widest uppercase mb-2">Scroll to explore</span>
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+            </div>
+        </div>
+        
+        <div class="w-full bg-[#0a0a0a] py-24 px-8 z-20 relative border-t border-white/5">
+            <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
+                <div>
+                    <div class="text-emerald-500 mb-4"><svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg></div>
+                    <h3 class="text-xl font-bold mb-3 text-white">AI Ortho-Slicing</h3>
+                    <p class="text-sm text-gray-400 leading-relaxed">Process massive drone maps securely on edge servers. The system dynamically calculates Ground Sample Distance via accurate map zoom integration.</p>
+                </div>
+                <div>
+                    <div class="text-emerald-500 mb-4"><svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg></div>
+                    <h3 class="text-xl font-bold mb-3 text-white">Geodesic Map Math</h3>
+                    <p class="text-sm text-gray-400 leading-relaxed">Search any location in India. Integrated Turf.js engine allows surveyors to manually verify property polygons calculating exact earth curvature areas.</p>
+                </div>
+                <div>
+                    <div class="text-emerald-500 mb-4"><svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></div>
+                    <h3 class="text-xl font-bold mb-3 text-white">Provisional Form 7 Registry</h3>
+                    <p class="text-sm text-gray-400 leading-relaxed">Generates cryptographically secure, QR-coded property titles ready for physical stamping and mutation at local Panchayat offices.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="auth-view" class="view-section flex-col items-center justify-center h-screen w-screen absolute inset-0 z-50 bg-black/90 backdrop-blur-md">
+        <div class="glass-panel border border-gray-800 p-10 w-full max-w-lg rounded-2xl shadow-2xl">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl font-bold tracking-tight text-white">Select Identity</h2>
+                <button onclick="navigateTo('landing-view')" class="text-gray-500 hover:text-white">✕</button>
+            </div>
+            <div class="space-y-4">
+                <div onclick="login('viewer')" class="border border-gray-800 bg-gray-900/50 hover:border-gray-500 p-6 rounded-xl cursor-pointer transition flex items-center space-x-4 group">
+                    <div class="p-3 bg-gray-800 rounded-lg group-hover:bg-gray-700 transition">
+                        <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-lg">Citizen Viewer</h3>
+                        <p class="text-xs text-gray-400 mt-1">View verified property boundaries & download certificates.</p>
+                    </div>
+                </div>
+                <div class="border border-gray-800 bg-gray-900/50 hover:border-gray-500 p-6 rounded-xl transition">
+                    <div class="flex items-center space-x-4 mb-4">
+                        <div class="p-3 bg-gray-800 rounded-lg">
+                            <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-white text-lg">Govt. Surveyor</h3>
+                            <p class="text-xs text-gray-400 mt-1">Run AI mapping and authorize titles.</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col space-y-3">
+                        <input type="text" id="officerNameInput" placeholder="Officer Name (e.g. S. Kumar)" class="w-full bg-black border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:border-emerald-500 outline-none transition text-white">
+                        <div class="flex space-x-2">
+                            <input type="password" id="pinInput" placeholder="Enter PIN (1234)" class="w-full bg-black border border-gray-700 rounded-lg px-4 py-2.5 text-sm focus:border-emerald-500 outline-none text-white transition">
+                            <button onclick="login('official')" class="bg-white text-black font-bold px-6 py-2.5 rounded-lg text-sm hover:bg-gray-200 transition">Login</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="dashboard-view" class="view-section relative h-screen w-screen absolute inset-0 z-30 overflow-hidden">
+        <div id="map"></div>
+        
+        <aside class="absolute top-0 left-0 w-[420px] glass-panel z-20 flex flex-col h-screen overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-800 flex items-center justify-between bg-black/60">
+                <div>
+                    <h1 class="text-lg font-black text-white tracking-widest">DRONEMAP AI</h1>
+                    <p id="roleIndicator" class="text-[9px] text-emerald-500 font-mono tracking-widest uppercase mt-1">SYSTEM LOCKED</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <select id="langSelect" class="bg-gray-900 text-white text-[10px] font-bold border border-gray-700 rounded px-2 py-1 outline-none cursor-pointer" onchange="changeLanguage(this.value)">
+                        <option value="en">EN</option><option value="hi">HI</option><option value="bn">BN</option>
+                    </select>
+                    <button onclick="navigateTo('landing-view')" class="text-[10px] text-gray-400 hover:text-white transition uppercase font-bold tracking-widest">Logout</button>
+                </div>
+            </div>
+
+            <div class="flex border-b border-gray-800 bg-black/80">
+                <button onclick="switchTab('survey')" id="tab-survey" class="tab-btn active flex-1 py-4 text-[11px] font-bold uppercase tracking-widest">Survey Tools</button>
+                <button onclick="switchTab('registry')" id="tab-registry" class="tab-btn flex-1 py-4 text-[11px] font-bold uppercase tracking-widest">Certificate Registry</button>
+            </div>
+
+            <div class="p-6 overflow-y-auto flex-1">
+                
+                <div id="survey-content" class="tab-content active space-y-5">
+                    
+                    <div id="publicControls" class="hidden">
+                        <p class="text-xs text-gray-400 mb-4 leading-relaxed">Map displays verified land parcels. Switch to Certificate Registry tab to download titles.</p>
+                        <button onclick="navigateTo('auth-view')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-black font-bold py-3 rounded text-xs uppercase tracking-widest transition shadow-lg">Elevate to Officer Login</button>
+                    </div>
+
+                    <div id="officialControls" class="hidden space-y-5">
+                        
+                        <div class="bg-gray-900/40 border border-gray-800 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-[10px] font-bold uppercase tracking-widest text-emerald-400">1. Target Area</h2>
+                                <button onclick="syncMapCenter()" class="text-[9px] bg-gray-800 hover:bg-gray-700 px-2.5 py-1 rounded text-white transition tracking-widest uppercase">⌖ Sync Center</button>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2 text-[9px] text-gray-500 font-bold uppercase tracking-widest">Lat</span>
+                                    <input id="inputLat" type="number" step="0.000001" value="24.0885" class="w-full bg-black border border-gray-700 rounded-md pl-10 pr-2 py-1.5 text-xs text-white focus:border-emerald-500 outline-none transition">
+                                </div>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2 text-[9px] text-gray-500 font-bold uppercase tracking-widest">Lon</span>
+                                    <input id="inputLon" type="number" step="0.000001" value="87.7150" class="w-full bg-black border border-gray-700 rounded-md pl-10 pr-2 py-1.5 text-xs text-white focus:border-emerald-500 outline-none transition">
+                                </div>
+                            </div>
+                            
+                            <div class="flex gap-2">
+                                <button onclick="locateSurveyor()" class="flex-1 bg-black hover:bg-gray-800 border border-gray-800 text-gray-300 text-[9px] font-bold uppercase tracking-widest py-2 rounded transition">📍 Locate Me</button>
+                                <button onclick="flyToCoordinates()" class="flex-1 bg-black hover:bg-gray-800 border border-gray-800 text-gray-300 text-[9px] font-bold uppercase tracking-widest py-2 rounded transition">🎯 Fly To</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-900/40 border border-gray-800 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-[10px] font-bold uppercase tracking-widest text-emerald-400">2. Vision Engine</h2>
+                                <button onclick="alert('Use the Polygon tool on the map to draw manually if AI is not needed.')" class="text-[9px] bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-white transition tracking-widest uppercase">✏️ Manual</button>
+                            </div>
+
+                            <p class="text-[10px] text-gray-500 mb-3 leading-relaxed">Instructions: Center the map exactly on the target property. Take a full-screen screenshot, upload it below, and execute.</p>
+
+                            <div class="relative mb-3">
+                                <span id="t-calib-label" class="absolute left-3 top-2 text-[9px] text-gray-500 font-bold uppercase tracking-widest">Area Calibration</span>
+                                <input id="inputCalibration" type="number" step="0.1" value="1.0" class="w-full bg-black border border-gray-700 rounded-md pl-24 pr-2 py-1.5 text-xs font-mono text-emerald-400 focus:border-emerald-500 outline-none transition">
+                            </div>
+
+                            <div id="dropzone" class="border border-dashed border-gray-600 bg-black/50 rounded-lg p-6 text-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-900/10 transition mb-4 group" onclick="document.getElementById('droneInput').click()">
+                                <input id="droneInput" type="file" class="hidden" accept="image/*">
+                                <svg class="w-6 h-6 text-gray-500 mx-auto mb-2 group-hover:text-emerald-500 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                <div id="uploadLabel" class="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Drop Snip Here</div>
+                            </div>
+                            <button id="processBtn" class="w-full bg-white hover:bg-gray-200 text-black font-bold tracking-widest text-[11px] uppercase py-3 rounded-md transition shadow-[0_0_15px_rgba(255,255,255,0.2)]"><span id="btnText">Execute AI</span></button>
+                        </div>
+
+                        <div id="previewBox" class="hidden border border-gray-800 rounded-lg overflow-hidden bg-black shadow-2xl">
+                            <div class="bg-[#111] px-4 py-2.5 text-[10px] font-bold tracking-widest text-emerald-400 uppercase flex justify-between items-center border-b border-gray-800">
+                                <span>Vision Output</span>
+                                <span id="detectionCount" class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded">0</span>
+                            </div>
+                            <img id="resultImagePreview" class="w-full h-40 object-cover cursor-pointer hover:opacity-80 transition" onclick="window.open(this.src, '_blank')" title="Click to enlarge">
+                        </div>
+
+                    </div>
+                </div>
+
+                <div id="registry-content" class="tab-content">
+                    <div class="p-5 bg-gray-900/40 border border-gray-800 rounded-lg text-center mb-5">
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Total Verified Parcels</p>
+                        <p id="totalRecords" class="text-4xl font-light text-white mt-1">0</p>
+                    </div>
+                    <p id="t-reg-desc" class="text-xs text-gray-500 mb-5 leading-relaxed text-center">Download digitally signed Form 7 certificates for all government-verified property limits.</p>
+                    <div id="registryList" class="space-y-3">
+                        <div class="text-center text-gray-600 text-xs py-10 italic">No records verified yet.</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </section>
+
+    <script>
+        const i18n = {
+            'en': { tab_survey: "Survey Tools", tab_reg: "Certificate Registry", ai_head: "2. Vision Engine", calib: "Area Calibration", upload: "Drop Snip Here", exec: "Execute AI", reg_desc: "Download digitally signed Form 7 certificates for all government-verified property limits.", none: "No records verified yet.", dl: "Download PDF" },
+            'hi': { tab_survey: "सर्वेक्षण उपकरण", tab_reg: "प्रमाणपत्र रजिस्ट्री", ai_head: "2. एआई इंजन", calib: "क्षेत्र अंशांकन", upload: "स्निप ड्रॉप करें", exec: "निष्पादित करें", reg_desc: "सभी सत्यापित संपत्तियों के लिए डिजिटल रूप से हस्ताक्षरित फॉर्म 7 प्रमाणपत्र डाउनलोड करें।", none: "अभी तक कोई रिकॉर्ड नहीं।", dl: "पीडीएफ डाउनलोड" },
+            'bn': { tab_survey: "জরিপ সরঞ্জাম", tab_reg: "শংসাপত্র রেজিস্ট্রি", ai_head: "২. এআই ইঞ্জিন", calib: "এরিয়া ক্যালিব্রেশন", upload: "স্নিপ দিন", exec: "চালু করুন", reg_desc: "সমস্ত সরকারি যাচাইকৃত সম্পত্তির জন্য ডিজিটাল ফর্ম 7 শংসাপত্র ডাউনলোড করুন।", none: "কোনো রেকর্ড নেই।", dl: "পিডিএফ ডাউনলোড" }
+        };
+
+        let currentLang = 'en';
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            document.getElementById('tab-survey').innerText = i18n[lang].tab_survey;
+            document.getElementById('tab-registry').innerText = i18n[lang].tab_reg;
+            document.getElementById('uploadLabel').innerText = i18n[lang].upload;
+            document.getElementById('btnText').innerText = i18n[lang].exec;
+            document.getElementById('t-reg-desc').innerText = i18n[lang].reg_desc;
+            loadVerifiedRecords(); 
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            document.getElementById(`${tabName}-content`).classList.add('active');
+            if (tabName === 'registry') loadVerifiedRecords();
+        }
+
+        let currentRole = 'viewer'; 
+        let loggedInOfficer = 'Public Viewer';
+
+        window.onclick = function(event) {
+            if (!event.target.matches('.w-8')) {
+                const dropdowns = document.getElementsByClassName("dropdown-content");
+                for (let i = 0; i < dropdowns.length; i++) {
+                    if (dropdowns[i].classList.contains('show')) dropdowns[i].classList.remove('show');
+                }
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const color = type === 'success' ? 'border-emerald-500 bg-[#0a0a0a] text-white' : 'border-red-500 bg-red-950/90 text-red-200';
+            toast.className = `toast-enter flex items-center w-80 p-4 border-l-4 shadow-2xl backdrop-blur-md rounded-r ${color}`;
+            toast.innerHTML = `<div class="text-sm font-semibold">${message}</div>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(100%)'; setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        function navigateTo(targetId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('view-active'));
+            document.getElementById(targetId).classList.add('view-active');
+            if(targetId === 'dashboard-view' && window.map) setTimeout(() => window.map.invalidateSize(), 300);
+        }
+
+        function login(role) {
+            if(role === 'official') {
+                const pin = document.getElementById('pinInput').value;
+                const name = document.getElementById('officerNameInput').value;
+                if(pin !== '1234') return showToast("Invalid PIN. Access Denied.", "error");
+                loggedInOfficer = name || "S. Kumar";
+            } else {
+                loggedInOfficer = "Public Viewer";
+            }
+            
+            currentRole = role;
+            document.getElementById('roleIndicator').innerText = role === 'official' ? `SURVEY OFFICER: ${loggedInOfficer}` : `MODE: ${loggedInOfficer}`;
+            document.getElementById('publicControls').style.display = role === 'viewer' ? 'block' : 'none';
+            document.getElementById('officialControls').style.display = role === 'official' ? 'block' : 'none';
+            
+            if(role === 'official') {
+                window.map.pm.addControls({ position: 'topright', drawMarker: false, drawCircleMarker: false, drawPolyline: false, drawCircle: false, drawText: false });
+            } else {
+                window.map.pm.removeControls();
+            }
+
+            loadVerifiedRecords();
+            navigateTo('dashboard-view');
+            showToast(role === 'official' ? `Authorized as Survey Officer ${loggedInOfficer}` : 'Welcome to the Public Registry');
+        }
+
+        // --- MAP INITIALIZATION ---
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22 });
+        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 22 });
+        window.map = L.map('map', { layers: [satelliteLayer], zoomControl: false }).setView([24.0885, 87.7150], 17);
+        L.control.zoom({ position: 'bottomright' }).addTo(window.map);
+        L.control.layers({"Satellite Imagery": satelliteLayer, "Standard Map": streetLayer}, null, {position: 'bottomright'}).addTo(window.map);
+        
+        let targetMarker = null;
+
+        function updateTargetCoords(lat, lon) {
+            document.getElementById('inputLat').value = Number(lat).toFixed(6);
+            document.getElementById('inputLon').value = Number(lon).toFixed(6);
+            if (targetMarker) window.map.removeLayer(targetMarker);
+            targetMarker = L.circleMarker([lat, lon], { radius: 5, color: '#10b981', fillColor: '#10b981', fillOpacity: 0.8 }).addTo(window.map);
+        }
+
+        // NEW: Sync Map Center Button
+        function syncMapCenter() {
+            const center = window.map.getCenter();
+            updateTargetCoords(center.lat, center.lng);
+            showToast("Target synced to map center.");
+        }
+
+        function flyToCoordinates() {
+            const lat = parseFloat(document.getElementById('inputLat').value);
+            const lon = parseFloat(document.getElementById('inputLon').value);
+            if (isNaN(lat) || isNaN(lon)) return showToast("Invalid coordinates provided.", "error");
+            window.map.flyTo([lat, lon], 19, { animate: true, duration: 1.5 });
+            updateTargetCoords(lat, lon);
+            showToast(`Mapsd to: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+        }
+
+        const geocoder = L.Control.geocoder({ defaultMarkGeocode: false, position: 'topleft', placeholder: 'Search map...' })
+        .on('markgeocode', function(e) {
+            window.map.fitBounds(e.geocode.bbox);
+            updateTargetCoords(e.geocode.center.lat, e.geocode.center.lng);
+            showToast("Centered: " + e.geocode.name);
+        }).addTo(window.map);
+
+        let aiLayer = null, publicLayer = null, selectedFile = null;
+
+        function locateSurveyor() {
+            window.map.locate({setView: true, maxZoom: 19});
+            window.map.once('locationfound', function(e) {
+                updateTargetCoords(e.latlng.lat, e.latlng.lng);
+                showToast("Location locked.");
+            });
+            window.map.once('locationerror', function(e) { showToast("GPS access denied.", "error"); });
+        }
+
+        function getCalibration() {
+            let val = parseFloat(document.getElementById('inputCalibration').value);
+            return (isNaN(val) || val <= 0) ? 1.0 : val;
+        }
+
+        function calculateArea(latlngs) {
+            const coords = latlngs.map(ll => [ll.lng, ll.lat]);
+            coords.push([latlngs[0].lng, latlngs[0].lat]); 
+            const polygon = turf.polygon([coords]);
+            
+            let baseArea = turf.area(polygon); 
+            let scaledArea = baseArea * getCalibration(); 
+            
+            return { 
+                sqm: scaledArea.toFixed(2), 
+                sqft: (scaledArea * 10.7639).toFixed(2), 
+                acres: (scaledArea / 4046.86).toFixed(3) 
+            };
+        }
+
+        // DEDICATED POPUP TEMPLATE FOR CLEANER UX
+        function createPopupContent(id, areaData, geojsonStr, typeTitle) {
+            return `
+                <div class="p-3 min-w-[240px]">
+                    <div class="text-[9px] text-emerald-400 font-bold uppercase tracking-widest mb-1 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> ${typeTitle}</div>
+                    <div class="font-black text-white text-lg mb-1 tracking-wide">${id}</div>
+                    <div class="text-xs text-gray-300 font-mono mb-1">Limit: <span class="text-emerald-400 font-bold">${areaData.sqm} m²</span></div>
+                    <div class="text-[10px] text-gray-500 font-mono mb-4 pb-3 border-b border-gray-800">(${areaData.sqft} sq ft | ${areaData.acres} Acres)</div>
+                    <div id="form-${id}" class="space-y-2.5">
+                        <input type="text" id="propName-${id}" placeholder="Property Designation" class="w-full bg-black border border-gray-700 rounded-md px-3 py-2 text-xs text-white focus:border-emerald-500 outline-none transition">
+                        <input type="text" id="ownerName-${id}" placeholder="Registered Owner" class="w-full bg-black border border-gray-700 rounded-md px-3 py-2 text-xs text-white focus:border-emerald-500 outline-none transition">
+                        <button onclick='saveProperty("${id}", "${areaData.sqm}", ${geojsonStr})' class="w-full bg-white hover:bg-gray-200 text-black text-[11px] font-bold uppercase tracking-widest py-2.5 rounded-md transition mt-1 shadow-[0_0_15px_rgba(255,255,255,0.15)]">Verify & Seal</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.map.on('pm:create', (e) => {
+            if(currentRole !== 'official') return window.map.removeLayer(e.layer);
+            const layer = e.layer;
+            const areaData = calculateArea(layer.getLatLngs()[0]);
+            const tempId = 'MANUAL-' + Date.now().toString().slice(-6);
+            
+            layer.bindPopup(createPopupContent(tempId, areaData, JSON.stringify(layer.toGeoJSON().geometry), "Manual Geodesic Audit"), { className: 'custom-popup' }).openPopup();
+        });
+
+        async function loadVerifiedRecords() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/records');
+                const data = await response.json();
+                document.getElementById('totalRecords').innerText = data.features.length;
+                const listContainer = document.getElementById('registryList');
+                listContainer.innerHTML = '';
+                if(data.features.length === 0) listContainer.innerHTML = `<div class="text-center text-gray-600 text-xs py-10 italic">${i18n[currentLang].none}</div>`;
+
+                if (publicLayer) window.map.removeLayer(publicLayer);
+
+                publicLayer = L.geoJSON(data, {
+                    style: { color: '#ffffff', weight: 2, fillOpacity: 0.1 },
+                    onEachFeature: (f, layer) => {
+                        const sqm = f.properties.area_sqm;
+                        const sqft = (sqm * 10.7639).toFixed(2);
+                        
+                        const item = document.createElement('div');
+                        item.className = "bg-gray-900/50 border border-gray-800 rounded-lg p-4 flex flex-col hover:border-emerald-500/50 transition";
+                        item.innerHTML = `
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <div class="font-bold text-white text-sm tracking-wide">${f.properties.owner}</div>
+                                    <div class="text-[9px] text-gray-400 font-mono mt-1 tracking-widest uppercase">ENR: ${f.properties.enrollment_no}</div>
+                                </div>
+                                <div class="text-xs text-emerald-400 font-mono text-right">${sqm} m²<br><span class="text-[9px] text-gray-500">${sqft} sq ft</span></div>
+                            </div>
+                            <form action="http://127.0.0.1:8000/generate_card" method="POST" target="_blank">
+                                <input type="hidden" name="parcel_id" value="${f.properties.parcel_id}">
+                                <button type="submit" class="w-full bg-black hover:bg-white hover:text-black border border-gray-700 text-gray-300 text-[10px] font-bold py-2.5 rounded uppercase tracking-widest transition">${i18n[currentLang].dl}</button>
+                            </form>
+                        `;
+                        listContainer.appendChild(item);
+
+                        layer.bindPopup(`
+                            <div class="p-3 min-w-[240px]">
+                                <div class="text-[9px] text-emerald-500 font-bold uppercase tracking-widest mb-1 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Secured Registry</div>
+                                <div class="font-black text-white text-lg mb-1 tracking-wide">${f.properties.parcel_id}</div>
+                                <div class="text-[10px] text-gray-400 mb-3 font-mono tracking-widest">ENR: ${f.properties.enrollment_no}</div>
+                                <div class="text-xs text-gray-300 mb-1"><b>Owner:</b> ${f.properties.owner}</div>
+                                <div class="text-xs text-gray-300 mb-4 pb-3 border-b border-gray-800"><b>Property:</b> ${f.properties.property_name}</div>
+                                <div class="text-xs text-emerald-400 font-mono mb-1">Limit: ${sqm} m²</div>
+                                <div class="text-[10px] text-gray-500 font-mono mb-4">(${sqft} sq ft)</div>
+                                <form action="http://127.0.0.1:8000/generate_card" method="POST" target="_blank">
+                                    <input type="hidden" name="parcel_id" value="${f.properties.parcel_id}">
+                                    <button type="submit" class="w-full bg-white hover:bg-gray-200 text-black text-[10px] font-bold py-2.5 rounded uppercase tracking-widest transition shadow-lg">Download PDF</button>
+                                </form>
+                            </div>
+                        `, { className: 'custom-popup' });
+                    }
+                }).addTo(window.map);
+            } catch(e) { console.error("Failed to load records"); }
+        }
+
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('droneInput');
+        dropzone.addEventListener('drop', (e) => { e.preventDefault(); selectedFile = e.dataTransfer.files[0]; document.getElementById('uploadLabel').innerText = selectedFile.name; });
+        fileInput.addEventListener('change', (e) => { selectedFile = e.target.files[0]; document.getElementById('uploadLabel').innerText = selectedFile.name; });
+        dropzone.addEventListener('dragover', (e) => e.preventDefault());
+
+        document.getElementById('processBtn').addEventListener('click', async () => {
+            if (!selectedFile) return showToast("Image payload missing.", "error");
+            const btnText = document.getElementById('btnText');
+            btnText.innerText = "Processing..."; document.getElementById('processBtn').disabled = true;
+
+            const latInput = parseFloat(document.getElementById('inputLat').value);
+            const zoomLevel = window.map.getZoom();
+            
+            // WEB MERCATOR GSD AUTO-CALCULATION
+            const metersPerPixel = (156543.03392 * Math.cos(latInput * Math.PI / 180)) / Math.pow(2, zoomLevel);
+            const calibration = getCalibration();
+            const finalGSD = metersPerPixel * calibration;
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('center_lat', latInput);
+            formData.append('center_lon', document.getElementById('inputLon').value);
+            formData.append('gsd', finalGSD); 
+            formData.append('conf_thresh', 0.15);
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/extract', { method: 'POST', body: formData });
+                const data = await response.json();
+                if(!response.ok) throw new Error(data.detail);
+
+                // EXCLUSIVE SIDEBAR IMAGE PREVIEW (No map overlay!)
+                document.getElementById('previewBox').classList.remove('hidden');
+                document.getElementById('resultImagePreview').src = "data:image/jpeg;base64," + data.telemetry.image_b64;
+                document.getElementById('detectionCount').innerText = `${data.geojson.features.length} Limits`;
+
+                if (aiLayer) window.map.removeLayer(aiLayer);
+
+                // ONLY DRAW GEOJSON ON MAP
+                aiLayer = L.geoJSON(data.geojson, {
+                    style: { color: '#10b981', weight: 2.5, fillOpacity: 0.1, dashArray: '4' },
+                    onEachFeature: (f, layer) => {
+                        const sqm = f.properties.area_sqm; 
+                        const sqft = (sqm * 10.7639).toFixed(2);
+                        const acres = (sqm / 4046.86).toFixed(3);
+                        const areaData = { sqm, sqft, acres };
+                        
+                        layer.bindPopup(createPopupContent(f.properties.parcel_id, areaData, JSON.stringify(f.geometry), "AI Vision Audit"), { className: 'custom-popup' });
+                    }
+                }).addTo(window.map);
+                
+                if(data.geojson.features.length > 0) {
+                    window.map.fitBounds(aiLayer.getBounds(), { padding: [50, 50] });
+                    showToast(`Extraction Complete: Found ${data.geojson.features.length} limits.`);
+                } else {
+                    showToast("No limits detected in snippet.", "error");
+                }
+            } catch (err) { showToast(`Error: ${err.message}`, "error"); } 
+            finally { btnText.innerText = i18n[currentLang].exec; document.getElementById('processBtn').disabled = false; }
+        });
+
+        async function saveProperty(parcelId, area, geometry) {
+            const propName = document.getElementById(`propName-${parcelId}`).value;
+            const ownerName = document.getElementById(`ownerName-${parcelId}`).value;
+            if(!propName || !ownerName) return showToast("Validation Error: Missing details.", "error");
+
+            const formData = new FormData();
+            formData.append('parcel_id', parcelId);
+            formData.append('owner_name', ownerName);
+            formData.append('prop_name', propName);
+            formData.append('area', area);
+            formData.append('geometry', JSON.stringify(geometry));
+            formData.append('officer_name', loggedInOfficer); 
+
+            try {
+                const res = await fetch('http://127.0.0.1:8000/verify', { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                document.getElementById(`form-${parcelId}`).innerHTML = `
+                    <div class="text-[10px] font-bold uppercase text-emerald-400 tracking-widest text-center py-2.5 bg-emerald-900/20 border border-emerald-500/30 rounded-md mb-2">Ledger Sealed</div>
+                    <div class="text-[10px] text-gray-400 font-mono text-center mb-3">${data.enrollment_no}</div>
+                    <form action="http://127.0.0.1:8000/generate_card" method="POST" target="_blank">
+                        <input type="hidden" name="parcel_id" value="${parcelId}">
+                        <button type="submit" class="w-full bg-white hover:bg-gray-200 text-black text-[11px] font-bold py-2.5 rounded-md uppercase tracking-widest transition shadow-lg">Download Form 7</button>
+                    </form>
+                `;
+                showToast(`Parcel Secured to Registry.`);
+                loadVerifiedRecords(); 
+            } catch (e) { showToast("Database insertion failed.", "error"); }
+        }
+
+        window.onload = loadVerifiedRecords;
+    </script>
+</body>
+</html>
