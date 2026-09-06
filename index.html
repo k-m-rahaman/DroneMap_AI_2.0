@@ -220,16 +220,13 @@
             </div>
 
             <div class="p-6 overflow-y-auto flex-1">
-                
                 <div id="survey-content" class="tab-content active space-y-5">
-                    
                     <div id="publicControls" class="hidden">
                         <p class="text-xs text-gray-400 mb-4 leading-relaxed">Map displays verified land parcels. Switch to Certificate Registry tab to download titles.</p>
                         <button onclick="navigateTo('auth-view')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-black font-bold py-3 rounded text-xs uppercase tracking-widest transition shadow-lg">Elevate to Officer Login</button>
                     </div>
 
                     <div id="officialControls" class="hidden space-y-5">
-                        
                         <div class="bg-gray-900/40 border border-gray-800 rounded-lg p-4">
                             <div class="flex justify-between items-center mb-4">
                                 <h2 class="text-[10px] font-bold uppercase tracking-widest text-emerald-400">1. Target Area</h2>
@@ -254,8 +251,22 @@
                         </div>
 
                         <div class="bg-gray-900/40 border border-gray-800 rounded-lg p-4">
+                            <h2 class="text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-4">2. Sensor Parameters</h2>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2 text-[9px] text-gray-500 font-bold uppercase tracking-widest">Alt (m)</span>
+                                    <input id="inputAltitude" type="number" step="1" value="120" class="w-full bg-black border border-gray-700 rounded-md pl-14 pr-2 py-1.5 text-xs font-mono text-emerald-400 focus:border-emerald-500 outline-none transition">
+                                </div>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-2 text-[9px] text-gray-500 font-bold uppercase tracking-widest">Calib</span>
+                                    <input id="inputCalibration" type="number" step="0.1" value="1.0" class="w-full bg-black border border-gray-700 rounded-md pl-12 pr-2 py-1.5 text-xs font-mono text-emerald-400 focus:border-emerald-500 outline-none transition">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-900/40 border border-gray-800 rounded-lg p-4">
                             <div class="flex justify-between items-center mb-4">
-                                <h2 class="text-[10px] font-bold uppercase tracking-widest text-emerald-400">2. Vision Engine</h2>
+                                <h2 class="text-[10px] font-bold uppercase tracking-widest text-emerald-400">3. Vision Engine</h2>
                                 <button onclick="alert('Use the Polygon tool on the map to draw manually if AI is not needed.')" class="text-[9px] bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-white transition tracking-widest uppercase">✏️ Manual</button>
                             </div>
 
@@ -274,7 +285,8 @@
                             <button id="processBtn" class="w-full bg-white hover:bg-gray-200 text-black font-bold tracking-widest text-[11px] uppercase py-3 rounded-md transition shadow-[0_0_15px_rgba(255,255,255,0.2)]"><span id="btnText">Execute AI</span></button>
                         </div>
 
-                        <div id="previewBox" class="hidden border border-gray-800 rounded-lg overflow-hidden bg-black shadow-2xl">
+                        <!-- EXCLUSIVE SIDEBAR PREVIEW - NO MAP OVERLAY -->
+                        <div id="previewBox" class="hidden border border-gray-800 rounded-lg overflow-hidden bg-black shadow-2xl mt-4">
                             <div class="bg-[#111] px-4 py-2.5 text-[10px] font-bold tracking-widest text-emerald-400 uppercase flex justify-between items-center border-b border-gray-800">
                                 <span>Vision Output</span>
                                 <span id="detectionCount" class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded">0</span>
@@ -409,7 +421,7 @@
             if (isNaN(lat) || isNaN(lon)) return showToast("Invalid coordinates provided.", "error");
             window.map.flyTo([lat, lon], 19, { animate: true, duration: 1.5 });
             updateTargetCoords(lat, lon);
-            showToast(`Mapsd to: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+            showToast(`Navigated to: ${lat.toFixed(4)}, ${lon.toFixed(4)}`);
         }
 
         const geocoder = L.Control.geocoder({ defaultMarkGeocode: false, position: 'topleft', placeholder: 'Search map...' })
@@ -478,7 +490,7 @@
 
         async function loadVerifiedRecords() {
             try {
-                const response = await fetch('http://127.0.0.1:8000/records');
+                const response = await fetch('https://dronemap-ai.onrender.com/records');
                 const data = await response.json();
                 document.getElementById('totalRecords').innerText = data.features.length;
                 const listContainer = document.getElementById('registryList');
@@ -503,7 +515,7 @@
                                 </div>
                                 <div class="text-xs text-emerald-400 font-mono text-right">${sqm} m²<br><span class="text-[9px] text-gray-500">${sqft} sq ft</span></div>
                             </div>
-                            <form action="http://127.0.0.1:8000/generate_card" method="POST" target="_blank">
+                            <form action="https://dronemap-ai.onrender.com/generate_card" method="POST" target="_blank">
                                 <input type="hidden" name="parcel_id" value="${f.properties.parcel_id}">
                                 <button type="submit" class="w-full bg-black hover:bg-white hover:text-black border border-gray-700 text-gray-300 text-[10px] font-bold py-2.5 rounded uppercase tracking-widest transition">${i18n[currentLang].dl}</button>
                             </form>
@@ -519,7 +531,7 @@
                                 <div class="text-xs text-gray-300 mb-4 pb-3 border-b border-gray-800"><b>Property:</b> ${f.properties.property_name}</div>
                                 <div class="text-xs text-emerald-400 font-mono mb-1">Limit: ${sqm} m²</div>
                                 <div class="text-[10px] text-gray-500 font-mono mb-4">(${sqft} sq ft)</div>
-                                <form action="http://127.0.0.1:8000/generate_card" method="POST" target="_blank">
+                                <form action="https://dronemap-ai.onrender.com/generate_card" method="POST" target="_blank">
                                     <input type="hidden" name="parcel_id" value="${f.properties.parcel_id}">
                                     <button type="submit" class="w-full bg-white hover:bg-gray-200 text-black text-[10px] font-bold py-2.5 rounded uppercase tracking-widest transition shadow-lg">Download PDF</button>
                                 </form>
@@ -557,22 +569,22 @@
             formData.append('conf_thresh', 0.15);
 
             try {
-                const response = await fetch('http://127.0.0.1:8000/extract', { method: 'POST', body: formData });
+                const response = await fetch('https://dronemap-ai.onrender.com/extract', { method: 'POST', body: formData });
                 const data = await response.json();
                 if(!response.ok) throw new Error(data.detail);
 
-                // EXCLUSIVE SIDEBAR IMAGE PREVIEW (No map overlay!)
+                // REVEAL SIDEBAR PREVIEW ONLY. NO MAP OVERLAY CREATED.
                 document.getElementById('previewBox').classList.remove('hidden');
                 document.getElementById('resultImagePreview').src = "data:image/jpeg;base64," + data.telemetry.image_b64;
                 document.getElementById('detectionCount').innerText = `${data.geojson.features.length} Limits`;
 
                 if (aiLayer) window.map.removeLayer(aiLayer);
 
-                // ONLY DRAW GEOJSON ON MAP
+                // DRAW VECTOR BOXES ONLY
                 aiLayer = L.geoJSON(data.geojson, {
                     style: { color: '#10b981', weight: 2.5, fillOpacity: 0.1, dashArray: '4' },
                     onEachFeature: (f, layer) => {
-                        const sqm = f.properties.area_sqm; 
+                        const sqm = (f.properties.area_sqm * getCalibration()).toFixed(2); 
                         const sqft = (sqm * 10.7639).toFixed(2);
                         const acres = (sqm / 4046.86).toFixed(3);
                         const areaData = { sqm, sqft, acres };
@@ -580,12 +592,12 @@
                         layer.bindPopup(createPopupContent(f.properties.parcel_id, areaData, JSON.stringify(f.geometry), "AI Vision Audit"), { className: 'custom-popup' });
                     }
                 }).addTo(window.map);
-                
-                if(data.geojson.features.length > 0) {
+
+                if (data.geojson.features.length > 0) {
                     window.map.fitBounds(aiLayer.getBounds(), { padding: [50, 50] });
                     showToast(`Extraction Complete: Found ${data.geojson.features.length} limits.`);
                 } else {
-                    showToast("No limits detected in snippet.", "error");
+                    showToast("AI found no limits in this image.", "error");
                 }
             } catch (err) { showToast(`Error: ${err.message}`, "error"); } 
             finally { btnText.innerText = i18n[currentLang].exec; document.getElementById('processBtn').disabled = false; }
@@ -605,13 +617,13 @@
             formData.append('officer_name', loggedInOfficer); 
 
             try {
-                const res = await fetch('http://127.0.0.1:8000/verify', { method: 'POST', body: formData });
+                const res = await fetch('https://dronemap-ai.onrender.com/verify', { method: 'POST', body: formData });
                 const data = await res.json();
                 
                 document.getElementById(`form-${parcelId}`).innerHTML = `
                     <div class="text-[10px] font-bold uppercase text-emerald-400 tracking-widest text-center py-2.5 bg-emerald-900/20 border border-emerald-500/30 rounded-md mb-2">Ledger Sealed</div>
                     <div class="text-[10px] text-gray-400 font-mono text-center mb-3">${data.enrollment_no}</div>
-                    <form action="http://127.0.0.1:8000/generate_card" method="POST" target="_blank">
+                    <form action="https://dronemap-ai.onrender.com/generate_card" method="POST" target="_blank">
                         <input type="hidden" name="parcel_id" value="${parcelId}">
                         <button type="submit" class="w-full bg-white hover:bg-gray-200 text-black text-[11px] font-bold py-2.5 rounded-md uppercase tracking-widest transition shadow-lg">Download Form 7</button>
                     </form>
