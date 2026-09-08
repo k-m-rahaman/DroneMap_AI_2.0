@@ -2,7 +2,7 @@ fastapi
 uvicorn
 python-multipart
 ultralytics
-Pillow
-fpdf
+opencv-python-headless
+fpdf2
 qrcode
-shapely
+pillow
