@@ -263,9 +263,8 @@
                                 <button onclick="alert('Use the Polygon tool on the top right of the map to draw boundaries manually.')" class="text-[9px] bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-white transition tracking-widest uppercase">✏️ Manual</button>
                             </div>
 
-                            <p id="t-inst" class="text-[10px] text-gray-400 mb-3 leading-relaxed">Center map on target parcel. Take a screenshot, drop it below, and execute.</p>
+                            <p id="t-inst" class="text-[10px] text-gray-400 mb-3 leading-relaxed">Zoom in to EXACTLY fit the target parcel on screen. Take a screenshot, drop it below, and execute.</p>
 
-                            <!-- FIXED: NO TEXT OVERLAPPING -->
                             <div class="flex items-center justify-between bg-black border border-gray-700 rounded-md px-3 py-2 mb-3">
                                 <span id="t-calib-label" class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Area Calibration</span>
                                 <input id="inputCalibration" type="number" step="0.1" value="1.0" class="w-20 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs font-mono text-emerald-400 text-right focus:border-emerald-500 outline-none">
@@ -309,6 +308,19 @@
     <script>
         const API_BASE = "https://dronemap-ai.onrender.com";
 
+        // NETWORK FAILSAFE FOR RURAL AREAS
+        window.addEventListener('offline', () => {
+            showToast("⚠️ CONNECTION LOST. Operating offline. Do not refresh the page.", "error");
+            document.getElementById('processBtn').disabled = true;
+            document.getElementById('btnText').innerText = "Offline Mode";
+        });
+
+        window.addEventListener('online', () => {
+            showToast("🟢 Connection Restored. System ready to sync.");
+            document.getElementById('processBtn').disabled = false;
+            document.getElementById('btnText').innerText = i18n[currentLang].exec;
+        });
+
         const i18n = {
             'en': {
                 landing_head: "A cadastral engine<br>makes it precise.",
@@ -334,7 +346,7 @@
                 calib: "Area Calibration",
                 upload: "Drop Snip Here",
                 exec: "Execute AI",
-                inst: "Center map on target parcel. Take a screenshot, drop it below, and execute.",
+                inst: "Zoom in to EXACTLY fit the target parcel on screen. Take a screenshot, drop it below, and execute.",
                 vis_out: "Vision Output",
                 total_p: "Total Verified Parcels",
                 reg_desc: "Download digitally signed Form 7 certificates for all government-verified property limits.",
@@ -365,7 +377,7 @@
                 calib: "क्षेत्र अंशांकन",
                 upload: "स्निप ड्रॉप करें",
                 exec: "एआई निष्पादित करें",
-                inst: "लक्षित क्षेत्र पर मैप केंद्रित करें। स्क्रीनशॉट लें, यहाँ अपलोड करें और चलाएं।",
+                inst: "लक्षित क्षेत्र को स्क्रीन पर पूरी तरह फिट करने के लिए ज़ूम करें। स्क्रीनशॉट लें, यहाँ अपलोड करें और चलाएं।",
                 vis_out: "एआई आउटपुट",
                 total_p: "कुल सत्यापित संपत्तियां",
                 reg_desc: "सभी सरकारी सत्यापित संपत्तियों के लिए डिजिटल फॉर्म 7 डाउनलोड करें।",
@@ -396,7 +408,7 @@
                 calib: "এরিয়া ক্যালিব্রেশন",
                 upload: "স্নিপ ফাইল দিন",
                 exec: "এআই চালু করুন",
-                inst: "ম্যাপে এলাকা কেন্দ্রস্থ করুন। স্ক্রিনশট নিয়ে নিচে আপলোড করে এআই চালান।",
+                inst: "ম্যাপ জুম করে শুধুমাত্র নির্দিষ্ট জমিটি স্ক্রিনে রাখুন। স্ক্রিনশট নিয়ে নিচে আপলোড করে এআই চালান।",
                 vis_out: "ভিশন আউটপুট",
                 total_p: "মোট সংরক্ষিত রেকর্ড",
                 reg_desc: "সমস্ত সরকারি যাচাইকৃত সম্পত্তির জন্য ডিজিটাল ফর্ম 7 শংসাপত্র ডাউনলোড করুন।",
@@ -411,11 +423,9 @@
             currentLang = lang;
             const t = i18n[lang];
 
-            // Sync Dropdowns
             document.getElementById('landingLangSelect').value = lang;
             document.getElementById('dashLangSelect').value = lang;
 
-            // Landing View Elements
             document.getElementById('landing-headline').innerHTML = t.landing_head;
             document.getElementById('landing-sub').innerText = t.landing_sub;
             document.getElementById('landing-btn').innerText = t.landing_btn;
@@ -427,7 +437,6 @@
             document.getElementById('feat3-t').innerText = t.feat3_t;
             document.getElementById('feat3-d').innerText = t.feat3_d;
 
-            // Auth View Elements
             document.getElementById('auth-title').innerText = t.auth_title;
             document.getElementById('auth-viewer-t').innerText = t.auth_viewer_t;
             document.getElementById('auth-viewer-d').innerText = t.auth_viewer_d;
@@ -435,7 +444,6 @@
             document.getElementById('auth-officer-d').innerText = t.auth_officer_d;
             document.getElementById('auth-login-btn').innerText = t.auth_login;
 
-            // Dashboard Elements
             document.getElementById('tab-survey').innerText = t.tab_survey;
             document.getElementById('tab-registry').innerText = t.tab_reg;
             document.getElementById('t-sec1-t').innerText = t.sec1_t;
@@ -520,6 +528,9 @@
         L.control.zoom({ position: 'bottomright' }).addTo(window.map);
         L.control.layers({"Satellite Imagery": satelliteLayer, "Standard Map": streetLayer}, null, {position: 'bottomright'}).addTo(window.map);
         
+        // NEW FIX: Enable Magnetic Snapping for precise, zero-overlap boundaries
+        window.map.pm.setGlobalOptions({ snappable: true, snapDistance: 15, snapMiddle: true });
+
         let targetMarker = null;
 
         function updateTargetCoords(lat, lon) {
@@ -666,14 +677,14 @@
         fileInput.addEventListener('change', (e) => { selectedFile = e.target.files[0]; document.getElementById('uploadLabel').innerText = selectedFile.name; });
         dropzone.addEventListener('dragover', (e) => e.preventDefault());
 
-        // CLIENT-SIDE IMAGE COMPRESSION (Prevents Render 512MB RAM Crash & Speeds Up Upload)
+        // NEW FIX: Increased maxDim to 1600 for better YOLOv8 accuracy while preserving memory safety
         async function compressImage(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     const img = new Image();
                     img.onload = () => {
-                        const maxDim = 1200;
+                        const maxDim = 1600; 
                         let w = img.width, h = img.height;
                         if (w > maxDim || h > maxDim) {
                             if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
@@ -693,7 +704,6 @@
             });
         }
 
-        // VISION EXECUTION WITH SMART PROGRESS & TIMEOUT
         document.getElementById('processBtn').addEventListener('click', async () => {
             if (!selectedFile) return showToast("Please drop or choose an image snip first.", "error");
             
@@ -710,7 +720,6 @@
             const finalGSD = metersPerPixel * calibration;
 
             try {
-                // Compress desktop screenshots down to ~150KB
                 const optimizedFile = await compressImage(selectedFile);
                 btnText.innerText = "Contacting Server...";
 
