@@ -759,7 +759,7 @@
                 }).addTo(window.map);
 
                 if (data.geojson.features.length > 0) {
-                    window.map.fitBounds(aiLayer.getBounds(), { padding: [50, 50] });
+                    window.map.fitBounds(aiLayer.getBounds(), { padding: [50, 50], maxZoom: 18 });
                     showToast(`Success: Detected ${data.geojson.features.length} parcel limits.`);
                 }
 
