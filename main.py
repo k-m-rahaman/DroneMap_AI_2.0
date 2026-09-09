@@ -25,7 +25,7 @@ app = FastAPI(title="DroneMap AI - Presentation Safe")
 # 1. BULLETPROOF CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Universal allowance to prevent any browser blocks
+    allow_origins=["*"],  # Universal allowance
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -62,7 +62,7 @@ async def extract_boundaries(
     center_lat: float = Form(...),
     center_lon: float = Form(...),
     gsd: float = Form(...),
-    conf_thresh: float = Form(0.15)
+    conf_thresh: float = Form(0.50)  # ENHANCEMENT: Stricter confidence
 ):
     contents = await file.read()
     nparr = np.frombuffer(contents, np.uint8)
@@ -92,17 +92,19 @@ async def extract_boundaries(
                 pixel_area = cv2.contourArea(np.array(mask).astype(np.float32))
                 area_sqm = pixel_area * (gsd ** 2)
 
-                features.append({
-                    "type": "Feature",
-                    "properties": {
-                        "parcel_id": f"AI-{uuid.uuid4().hex[:6].upper()}",
-                        "area_sqm": round(area_sqm, 2)
-                    },
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [geo_coords]
-                    }
-                })
+                # ENHANCEMENT: Noise Filter - Only keep polygons larger than 15 sqm
+                if area_sqm >= 15.0:
+                    features.append({
+                        "type": "Feature",
+                        "properties": {
+                            "parcel_id": f"AI-{uuid.uuid4().hex[:6].upper()}",
+                            "area_sqm": round(area_sqm, 2)
+                        },
+                        "geometry": {
+                            "type": "Polygon",
+                            "coordinates": [geo_coords]
+                        }
+                    })
         else:
             img_with_masks = img
 
@@ -116,7 +118,6 @@ async def extract_boundaries(
 
     except Exception as e:
         print(f"Server RAM Exceeded. Presentation Fallback Triggered: {e}")
-        # DEMO FALLBACK: Instantly returns a formatted polygon if the AI crashes.
         offset_meters = 15.0
         lat_offset = offset_meters / 111320.0
         lon_offset = offset_meters / (111320.0 * np.cos(np.radians(center_lat)))

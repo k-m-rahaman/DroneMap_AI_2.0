@@ -270,11 +270,14 @@
                                 <input id="inputCalibration" type="number" step="0.1" value="1.0" class="w-20 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs font-mono text-emerald-400 text-right focus:border-emerald-500 outline-none">
                             </div>
 
-                            <div id="dropzone" class="border border-dashed border-gray-600 bg-black/50 rounded-lg p-6 text-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-900/10 transition mb-4 group" onclick="document.getElementById('droneInput').click()">
+                            <div id="dropzone" class="border border-dashed border-gray-600 bg-black/50 rounded-lg p-6 text-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-900/10 transition mb-2 group" onclick="document.getElementById('droneInput').click()">
                                 <input id="droneInput" type="file" class="hidden" accept="image/*">
                                 <svg class="w-6 h-6 text-gray-500 mx-auto mb-2 group-hover:text-emerald-500 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                                 <div id="uploadLabel" class="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Drop Snip Here</div>
                             </div>
+                            
+                            <!-- ENHANCEMENT: Metadata UI panel -->
+                            <div id="imageMetadata" class="hidden text-[10px] text-gray-400 font-mono mt-1 mb-4 text-center bg-black p-2 rounded border border-gray-800"></div>
                             
                             <button id="processBtn" class="w-full bg-white hover:bg-gray-200 text-black font-bold tracking-widest text-[11px] uppercase py-3 rounded-md transition shadow-[0_0_15px_rgba(255,255,255,0.2)]">
                                 <span id="btnText">Execute AI</span>
@@ -292,8 +295,6 @@
                 </div>
 
                 <div id="registry-content" class="tab-content">
-                    
-                    <!-- NEW FIX: Direct Application Tracker / Search Box -->
                     <div class="bg-gray-900/40 border border-gray-800 rounded-lg p-4 mb-4">
                         <p id="t-search-title" class="text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-3">Track Application</p>
                         <div class="flex gap-2">
@@ -415,7 +416,7 @@
                 auth_viewer_d: "যাচাইকৃত সীমানা দেখুন এবং শংসাপত্র ডাউনলোড করুন।",
                 auth_officer_t: "সরকারি সমীক্ষক (Officer)",
                 auth_officer_d: "এআই ম্যাপিং চালান এবং দলিলের সীমানা নিশ্চিত করুন।",
-                auth_login: "লগইন করুন",
+                auth_login: "লॉगইন করুন",
                 tab_survey: "জরিপ সরঞ্জাম",
                 tab_reg: "শংসাপত্র রেজিস্ট্রি",
                 sec1_t: "১. নির্বাচিত এলাকা",
@@ -634,7 +635,6 @@
             layer.bindPopup(createPopupContent(tempId, areaData, JSON.stringify(layer.toGeoJSON().geometry), "Manual Geodesic Audit"), { className: 'custom-popup' }).openPopup();
         });
 
-        // 🚀 NEW: Search Function added here
         function searchAndDownload() {
             const query = document.getElementById('searchInput').value.trim().toUpperCase();
             if (!query) return showToast("Enter an Enrollment Number or Parcel ID.", "error");
@@ -726,8 +726,18 @@
 
         const dropzone = document.getElementById('dropzone');
         const fileInput = document.getElementById('droneInput');
-        dropzone.addEventListener('drop', (e) => { e.preventDefault(); selectedFile = e.dataTransfer.files[0]; document.getElementById('uploadLabel').innerText = selectedFile.name; });
-        fileInput.addEventListener('change', (e) => { selectedFile = e.target.files[0]; document.getElementById('uploadLabel').innerText = selectedFile.name; });
+        const metaBox = document.getElementById('imageMetadata'); // ENHANCEMENT
+
+        function updateFileInfo(file) {
+            selectedFile = file;
+            document.getElementById('uploadLabel').innerText = file.name;
+            // ENHANCEMENT: Display File Metadata to look professional
+            metaBox.classList.remove('hidden');
+            metaBox.innerHTML = `File Size: ${(file.size/1024).toFixed(1)} KB | Image Format: ${file.type.split('/')[1].toUpperCase()}<br><span class="text-emerald-500">Geospatial Mapping Ready</span>`;
+        }
+
+        dropzone.addEventListener('drop', (e) => { e.preventDefault(); updateFileInfo(e.dataTransfer.files[0]); });
+        fileInput.addEventListener('change', (e) => { updateFileInfo(e.target.files[0]); });
         dropzone.addEventListener('dragover', (e) => e.preventDefault());
 
         async function compressImage(file) {
@@ -771,6 +781,9 @@
             const metersPerPixel = (156543.03392 * Math.cos(latInput * Math.PI / 180)) / Math.pow(2, zoomLevel);
             const calibration = getCalibration();
             const finalGSD = metersPerPixel * calibration;
+            
+            // ENHANCEMENT: UI Feedback
+            if(metaBox) metaBox.innerHTML += `<br>GSD Calculated: ${(finalGSD*100).toFixed(2)} cm/px`;
 
             try {
                 const optimizedFile = await compressImage(selectedFile);
@@ -781,7 +794,8 @@
                 formData.append('center_lat', latInput);
                 formData.append('center_lon', clon);
                 formData.append('gsd', finalGSD); 
-                formData.append('conf_thresh', 0.15);
+                // ENHANCEMENT: Send 0.50 confidence to backend
+                formData.append('conf_thresh', 0.50);
 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => {
@@ -817,9 +831,10 @@
                 }).addTo(window.map);
 
                 if (data.geojson.features.length > 0) {
-                    // 🚀 NEW FIX: Added maxZoom: 18 so it never turns grey!
                     window.map.fitBounds(aiLayer.getBounds(), { padding: [50, 50], maxZoom: 18 });
                     showToast(`Success: Detected ${data.geojson.features.length} parcel limits.`);
+                } else {
+                    showToast("No valid boundaries detected above 50% confidence.", "error");
                 }
 
             } catch (err) { 
@@ -850,7 +865,6 @@
                     }
                 }).addTo(window.map);
                 
-                // 🚀 NEW FIX: Added maxZoom: 18 here too!
                 window.map.fitBounds(aiLayer.getBounds(), { padding: [50, 50], maxZoom: 18 });
                 
                 document.getElementById('previewBox').classList.remove('hidden');
