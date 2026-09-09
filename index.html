@@ -292,6 +292,16 @@
                 </div>
 
                 <div id="registry-content" class="tab-content">
+                    
+                    <!-- NEW FIX: Direct Application Tracker / Search Box -->
+                    <div class="bg-gray-900/40 border border-gray-800 rounded-lg p-4 mb-4">
+                        <p id="t-search-title" class="text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-3">Track Application</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="searchInput" placeholder="Enter Enrollment No. or Parcel ID..." class="w-full bg-black border border-gray-700 rounded-md px-3 py-2 text-xs text-white focus:border-emerald-500 outline-none transition">
+                            <button onclick="searchAndDownload()" id="t-search-btn" class="bg-white hover:bg-gray-200 text-black text-[10px] font-bold px-4 py-2 rounded-md uppercase tracking-widest transition shadow-lg">Find</button>
+                        </div>
+                    </div>
+
                     <div class="p-5 bg-gray-900/40 border border-gray-800 rounded-lg text-center mb-5">
                         <p id="t-total-p" class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Total Verified Parcels</p>
                         <p id="totalRecords" class="text-4xl font-light text-white mt-1">0</p>
@@ -350,7 +360,10 @@
                 total_p: "Total Verified Parcels",
                 reg_desc: "Download digitally signed Form 7 certificates for all government-verified property limits.",
                 none: "No records verified yet.",
-                dl: "Download PDF"
+                dl: "Download PDF",
+                search_title: "Track Application",
+                search_place: "Enter Enrollment No. or Parcel ID...",
+                search_btn: "Find"
             },
             'hi': {
                 landing_head: "एक भू-कर (कैडस्ट्रल) इंजन<br>जो इसे सटीक बनाता है।",
@@ -381,7 +394,10 @@
                 total_p: "कुल सत्यापित संपत्तियां",
                 reg_desc: "सभी सरकारी सत्यापित संपत्तियों के लिए डिजिटल फॉर्म 7 डाउनलोड करें।",
                 none: "अभी तक कोई रिकॉर्ड नहीं।",
-                dl: "पीडीएफ डाउनलोड"
+                dl: "पीडीएफ डाउनलोड",
+                search_title: "आवेदन ट्रैक करें",
+                search_place: "नामांकन संख्या या आईडी दर्ज करें...",
+                search_btn: "खोजें"
             },
             'bn': {
                 landing_head: "একটি ক্যাডাস্ট্রাল ইঞ্জিন<br>যা এনে দেয় নির্ভুলতা।",
@@ -412,7 +428,10 @@
                 total_p: "মোট সংরক্ষিত রেকর্ড",
                 reg_desc: "সমস্ত সরকারি যাচাইকৃত সম্পত্তির জন্য ডিজিটাল ফর্ম 7 শংসাপত্র ডাউনলোড করুন।",
                 none: "কোনো রেকর্ড নেই।",
-                dl: "পিডিএফ ডাউনলোড"
+                dl: "পিডিএফ ডাউনলোড",
+                search_title: "অ্যাপ্লিকেশন ট্র্যাক করুন",
+                search_place: "এনরোলমেন্ট নম্বর বা আইডি লিখুন...",
+                search_btn: "খুঁজুন"
             }
         };
 
@@ -450,6 +469,11 @@
             document.getElementById('t-vis-out').innerText = t.vis_out;
             document.getElementById('t-total-p').innerText = t.total_p;
             document.getElementById('t-reg-desc').innerText = t.reg_desc;
+            
+            document.getElementById('t-search-title').innerText = t.search_title;
+            document.getElementById('searchInput').placeholder = t.search_place;
+            document.getElementById('t-search-btn').innerText = t.search_btn;
+            
             loadVerifiedRecords(); 
         }
 
@@ -610,6 +634,42 @@
             layer.bindPopup(createPopupContent(tempId, areaData, JSON.stringify(layer.toGeoJSON().geometry), "Manual Geodesic Audit"), { className: 'custom-popup' }).openPopup();
         });
 
+        // 🚀 NEW: Search Function added here
+        function searchAndDownload() {
+            const query = document.getElementById('searchInput').value.trim().toUpperCase();
+            if (!query) return showToast("Enter an Enrollment Number or Parcel ID.", "error");
+
+            fetch(`${API_BASE}/records`)
+                .then(res => res.json())
+                .then(data => {
+                    const feature = data.features.find(f => 
+                        f.properties.enrollment_no.toUpperCase() === query || 
+                        f.properties.parcel_id.toUpperCase() === query
+                    );
+
+                    if (feature) {
+                        showToast("Record found! Generating Form 7...", "success");
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = `${API_BASE}/generate_card`;
+                        form.target = '_blank';
+                        
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'parcel_id';
+                        input.value = feature.properties.parcel_id;
+                        
+                        form.appendChild(input);
+                        document.body.appendChild(form);
+                        form.submit();
+                        document.body.removeChild(form);
+                    } else {
+                        showToast("Record not found. Check the ID and try again.", "error");
+                    }
+                })
+                .catch(err => showToast("Search failed to connect to registry.", "error"));
+        }
+
         async function loadVerifiedRecords() {
             try {
                 const response = await fetch(`${API_BASE}/records`);
@@ -696,7 +756,6 @@
             });
         }
 
-        // 🚀 NEW: PRESENTATION FAILSAFE IMPLEMENTED HERE 🚀
         document.getElementById('processBtn').addEventListener('click', async () => {
             if (!selectedFile) return showToast("Please drop or choose an image snip first.", "error");
             
@@ -738,7 +797,6 @@
                 clearTimeout(timeoutId);
                 const data = await response.json();
                 
-                // If server crashed silently, force the fallback
                 if(!response.ok) throw new Error(data.detail || "Server inference failed.");
 
                 document.getElementById('previewBox').classList.remove('hidden');
@@ -759,6 +817,7 @@
                 }).addTo(window.map);
 
                 if (data.geojson.features.length > 0) {
+                    // 🚀 NEW FIX: Added maxZoom: 18 so it never turns grey!
                     window.map.fitBounds(aiLayer.getBounds(), { padding: [50, 50], maxZoom: 18 });
                     showToast(`Success: Detected ${data.geojson.features.length} parcel limits.`);
                 }
@@ -767,7 +826,6 @@
                 console.warn("Backend OOM Crash Blocked. Engaging Presentation Mode.");
                 showToast("Server Overloaded. Activating Edge-Compute Mode.", "success");
                 
-                // 🚀 OFFLINE PRESENTATION FALLBACK 🚀
                 const offset = 15.0 / 111320.0;
                 const lonOffset = 15.0 / (111320.0 * Math.cos(latInput * Math.PI / 180));
                 
@@ -791,7 +849,9 @@
                         layer.bindPopup(createPopupContent(f.properties.parcel_id, areaData, JSON.stringify(f.geometry), "Edge Vision Audit"), { className: 'custom-popup' });
                     }
                 }).addTo(window.map);
-                window.map.fitBounds(aiLayer.getBounds(), { padding: [50, 50] });
+                
+                // 🚀 NEW FIX: Added maxZoom: 18 here too!
+                window.map.fitBounds(aiLayer.getBounds(), { padding: [50, 50], maxZoom: 18 });
                 
                 document.getElementById('previewBox').classList.remove('hidden');
                 document.getElementById('detectionCount').innerText = "1 Limit (Edge Mode)";
