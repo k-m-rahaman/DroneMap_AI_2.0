@@ -180,9 +180,11 @@ function restoreRecovery(){
 }
 async function api(path,options={}) {
     const requestEpoch=state.epoch,requestUserId=state.user?.id;
+    const {responseType='json',...requestOptions}=options;
     const headers={...options.headers};
     if(options.body&&!(options.body instanceof FormData))headers['Content-Type']='application/json';
-    const response=await fetch(path,{...options,headers,credentials:'same-origin'});
+    const response=await fetch(path,{...requestOptions,headers,credentials:'same-origin'});
+    if(response.ok&&responseType==='blob')return response.blob();
     const data=await response.json().catch(()=>({}));
     if(!response.ok){
         const detail=Array.isArray(data.detail)?data.detail.map(x=>x.msg).join('; '):data.detail;
@@ -214,11 +216,31 @@ function renderDemoNotice(){
 function applyDeploymentStatus(status){
     const wasDemo=state.publicDemo;
     state.deploymentChecked=true;state.publicDemo=Boolean(status.public_demo);state.demo=status.demo||null;renderDemoNotice();
-    // Status arrives after the map is created. Start guests close enough to scan
-    // the visible area within the hosted demo's 500 metre limit.
-    if(state.publicDemo&&!wasDemo&&!state.user)window.map?.setZoom?.(defaultMapZoom());
+    // Status arrives after the map is created. Start guests at a sample location
+    // with detailed imagery, within the hosted demo's 500 metre scan limit.
+    if(state.publicDemo&&!wasDemo&&!state.user){
+        const center=defaultMapCenter();window.map?.setView?.(center,defaultMapZoom());
+        $('inputLat').value=center[0];$('inputLon').value=center[1];
+        $('mapCoordinates').textContent='22.577000° N · 88.416000° E';
+        $('mapImageryStatus').textContent='Kolkata sample area · Draw a scan area or detect the visible buildings.';
+    }
 }
 function defaultMapZoom(){return state.publicDemo?19:17;}
+function defaultMapCenter(){return state.publicDemo?[22.577,88.416]:[24.0885,87.7150];}
+function configureSatelliteFallback(satellite){
+    satellite.on('tileerror',event=>{
+        if(!navigator.onLine)return;
+        const failedZoom=Number(event.coords?.z),currentMax=satellite.options.maxNativeZoom;
+        // Redraw removes the previous request batch. Ignore its late errors so
+        // a group of missing tiles cannot skip straight to the lowest level.
+        if(!Number.isInteger(failedZoom)||failedZoom>currentMax)return;
+        if(failedZoom<=16){$('mapImageryStatus').textContent='Map imagery is unavailable here. Move the map or import georeferenced imagery.';return;}
+        satellite.options.maxNativeZoom=failedZoom-1;
+        $('mapImageryStatus').textContent='Basemap using lower-resolution satellite imagery. Review AI outlines against a survey source.';
+        satellite.redraw();
+    });
+    return satellite;
+}
 async function openPortal(){
     if(state.busy)return;
     if(!state.deploymentChecked){try{applyDeploymentStatus(await api('/api/status'));}catch(error){showToast(error.message,'error');return;}}
@@ -511,8 +533,23 @@ function renderRegistry(){
         item.appendChild(actions);container.appendChild(item);
     }
 }
-function openReport(id){window.open('/api/features/'+encodeURIComponent(id)+'/report.pdf','_blank','noopener');}
-function downloadSelectedReport(){const e=state.entries.get(state.selectedKey);if(e?.saved&&!state.publicReport){if(e.dirty)showToast('The PDF contains the saved version. Save edits first to include them.','error');openReport(e.feature.id);}}
+async function openReport(id){
+    if(!state.user||state.publicReport)return;
+    const epoch=state.epoch,userId=state.user.id;
+    const sameSession=()=>state.epoch===epoch&&state.user?.id===userId;
+    try{
+        const blob=await api('/api/features/'+encodeURIComponent(id)+'/report.pdf',{responseType:'blob'});
+        if(!sameSession())return;
+        if(blob.type.split(';')[0]!=='application/pdf'||await blob.slice(0,5).text()!=='%PDF-')throw new Error('The server did not return a survey PDF. Please try again.');
+        if(!sameSession())return;
+        const url=URL.createObjectURL(blob),link=document.createElement('a');
+        link.href=url;link.download='dronemap-survey-'+String(id).replace(/[^a-zA-Z0-9_-]/g,'_')+'.pdf';
+        document.body.appendChild(link);
+        try{link.click();}finally{link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+        showToast('Survey PDF download started.');
+    }catch(error){if(sameSession())showToast(error.message,'error');}
+}
+function downloadSelectedReport(){const e=state.entries.get(state.selectedKey);if(e?.saved&&!state.publicReport){if(e.dirty)showToast('The PDF contains the saved version. Save edits first to include them.','error');return openReport(e.feature.id);}}
 function exportProject(format){if(!state.user||!state.project)return showToast('Sign in to export private survey records.','error');if(['geojson','csv'].includes(format))window.open('/api/projects/'+state.project.id+'/export.'+format,'_blank','noopener');}
 async function loadFeatureHistory(){
     const key=state.selectedKey,e=state.entries.get(key);if(!e?.saved||state.publicReport)return;const epoch=state.epoch;$('historyList').textContent='Loading versions…';
@@ -631,8 +668,8 @@ async function previewMission(){
 function downloadMission(){if(!state.mission)return showToast('Preview a flight route first.','error');const blob=new Blob([JSON.stringify(state.mission.plan,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='dronemap-'+(state.project?.id||'survey')+'.plan';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 async function showPublicReport(token){try{const snapshot=await api('/api/public/reports/'+encodeURIComponent(token));state.publicReport=snapshot;state.project=snapshot.project;state.role='viewer';state.records=[snapshot.feature];const key=addEntry(snapshot.feature,null,true);state.entries.get(key).dirty=false;configureAccess();renderProjectOptions();renderRegistry();renderDetectionList();navigateTo('dashboard-view');switchTab('registry');setTimeout(()=>window.map.fitBounds(state.entries.get(key).layer.getBounds(),{padding:[40,80],maxZoom:20}),120);}catch(error){showToast(error.message,'error');}}
 function initialize(){
-    const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:22,maxNativeZoom:19,attribution:'Tiles © Esri and imagery providers'}),street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:22,maxNativeZoom:19,attribution:'© OpenStreetMap contributors'});
-    window.map=L.map('map',{layers:[satellite],zoomControl:false}).setView([24.0885,87.7150],defaultMapZoom());
+    const satellite=configureSatelliteFallback(L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?blankTile=false',{maxZoom:22,maxNativeZoom:19,attribution:'Tiles © Esri and imagery providers'})),street=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:22,maxNativeZoom:19,attribution:'© OpenStreetMap contributors'});
+    window.map=L.map('map',{layers:[satellite],zoomControl:false}).setView(defaultMapCenter(),defaultMapZoom());
     L.control.zoom({position:'bottomright'}).addTo(window.map);L.control.layers({'Satellite imagery':satellite,'Street map':street},null,{position:'bottomright'}).addTo(window.map);
     window.map.pm.setGlobalOptions({snappable:true,snapDistance:15,snapMiddle:true,limitMarkersToCount:10});
     if(L.Control.geocoder)L.Control.geocoder({defaultMarkGeocode:false,position:'topleft',placeholder:'Search map…'}).on('markgeocode',e=>{window.map.fitBounds(e.geocode.bbox);updateTargetCoords(e.geocode.center.lat,e.geocode.center.lng);}).addTo(window.map);
