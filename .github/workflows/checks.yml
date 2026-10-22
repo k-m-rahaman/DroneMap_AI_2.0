@@ -13,9 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
+      DRONEMAP_DATA_DIR: /tmp/dronemap-tests
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONUTF8: "1"
-      DRONEMAP_DATA_DIR: ${{ runner.temp }}/dronemap-tests
       YOLO_AUTOINSTALL: "false"
     steps:
       - uses: actions/checkout@v4
