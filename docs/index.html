@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DroneMap AI by GeoVision: a georeferenced building-survey and parcel-review prototype for SIH26012. Try the temporary demonstration or run the full application locally.">
+  <meta name="theme-color" content="#123e3b">
+  <title>DroneMap AI · GeoVision</title>
+  <style>
+    :root{color-scheme:light;--ink:#143b38;--muted:#536962;--paper:#f6f6ef;--line:#d8e2d9;--green:#c8e588;--white:#fff;--teal:#123e3b}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:inherit}a:focus-visible,button:focus-visible{outline:3px solid #be862f;outline-offset:5px}svg{display:block}main,header,footer{max-width:1160px;margin:auto;padding-inline:32px}.topbar{display:flex;justify-content:space-between;align-items:center;gap:24px;padding-block:25px;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:750;letter-spacing:-.4px;font-size:20px}.brand-mark{width:42px;height:42px;background:var(--teal);color:var(--green);border-radius:12px;padding:9px}.topbar nav{display:flex;gap:24px;font-size:14px;font-weight:600}.topbar nav a{text-decoration:none}.eyebrow{display:flex;align-items:center;gap:9px;font-size:12px;letter-spacing:1.7px;font-weight:750;text-transform:uppercase}.dot{width:7px;height:7px;border-radius:50%;background:#bddd78;flex-shrink:0}.hero{padding-block:76px 64px;display:grid;grid-template-columns:1.2fr 1fr;align-items:center;gap:64px}h1{font-size:clamp(40px,5.1vw,64px);line-height:1.08;letter-spacing:-2.6px;font-weight:680;margin:20px 0 24px;max-width:650px}h1 span{color:#41796a}.lead{font-size:18px;max-width:570px;color:var(--muted);line-height:1.75}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}.button{display:inline-flex;align-items:center;justify-content:center;gap:12px;text-decoration:none;padding:13px 19px;border-radius:8px;border:1px solid var(--teal);font-size:14px;font-weight:700;min-height:50px}.primary{background:var(--teal);color:#fff}.secondary{background:transparent}.button:hover{filter:brightness(.93)}.button[aria-disabled=true]{background:#e4e8dd;color:#52635a;border-color:#cad4c8;cursor:default}.availability{font-size:12px;color:var(--muted);max-width:520px;margin:15px 0 0}.map-card{position:relative;background:#e3ebdd;border:1px solid #ccd9c8;border-radius:20px;overflow:hidden;aspect-ratio:1.05;box-shadow:0 20px 45px #123e3b12}.map-card>svg{width:100%;height:100%}.map-chip{position:absolute;left:20px;top:20px;display:flex;align-items:center;gap:8px;border-radius:20px;padding:7px 12px;background:#fffef2eF;font-size:11px;font-weight:650;box-shadow:0 3px 10px #143b3810}.map-label{position:absolute;bottom:20px;left:20px;right:20px;background:#123e3b;color:#fff;border-radius:11px;padding:15px 17px;display:flex;justify-content:space-between;align-items:center;gap:15px}.map-label strong{display:block;font-size:13px}.map-label span{font-size:11px;color:#bfd5c7}.map-label .tag{color:var(--green);font-size:10px;letter-spacing:1px;white-space:nowrap}.section-title{font-size:28px;letter-spacing:-.8px;line-height:1.25;margin:0 0 12px}.intro{max-width:650px;margin:0;color:var(--muted)}.section{padding-block:48px;border-top:1px solid var(--line)}.workflow{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:30px}.step{padding:26px 26px 28px;background:#fff;border:1px solid var(--line);border-radius:13px}.step-number{color:#41796a;font-size:12px;font-weight:750;letter-spacing:1px}.step h3{font-size:19px;margin:14px 0 10px;letter-spacing:-.4px}.step p{font-size:14px;color:var(--muted);margin:0}.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:45px}.features{margin:20px 0 0;padding-left:19px;color:var(--muted);font-size:14px}.features li{margin:11px 0}.panel{border-radius:14px;padding:29px;background:var(--teal);color:#fff}.panel h2{margin:0 0 12px;font-size:24px;letter-spacing:-.6px}.panel p{color:#c8d9d0;font-size:14px}.panel a{color:#daedae;text-underline-offset:3px}.panel .small{font-size:12px}.status-row{display:flex;gap:10px;align-items:center;margin-bottom:22px;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#d7e8b4}.resources{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:25px}.resource{display:block;text-decoration:none;border:1px solid var(--line);border-radius:11px;padding:21px;background:#ffffff80}.resource strong{display:flex;justify-content:space-between;font-size:15px}.resource p{font-size:13px;color:var(--muted);margin:9px 0 0}.resource:hover{border-color:#729e85;background:#fff}.disclaimer{background:#e9ede2;border-radius:10px;padding:20px 24px;font-size:13px;color:#4d6559;margin-top:30px}.disclaimer p{margin:0}.disclaimer p+p{margin-top:9px}footer{padding-block:25px 35px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;font-size:12px;color:var(--muted)}footer a{text-underline-offset:3px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    @media(max-width:850px){.hero{grid-template-columns:1fr 1fr;gap:28px;padding-block:50px}h1{font-size:44px;letter-spacing:-1.8px}.lead{font-size:16px}.workflow{gap:12px}.step{padding:20px}.detail-grid{gap:28px}}
+    @media(max-width:650px){main,header,footer{padding-inline:22px}.topbar{padding-block:20px}.topbar nav{gap:15px;font-size:12px}.topbar nav .desktop{display:none}.brand{font-size:18px}.hero{grid-template-columns:1fr;padding-block:42px;gap:32px}h1{font-size:47px;max-width:470px}.map-card{max-width:460px;aspect-ratio:1.25}.workflow,.detail-grid,.resources{grid-template-columns:1fr}.workflow{gap:14px}.section{padding-block:35px}.detail-grid{gap:28px}.step h3{margin-top:8px}.step{padding:22px}footer{flex-direction:column;gap:8px}.button{flex:1}.panel{padding:25px}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <a class="brand" href="#" aria-label="DroneMap AI home"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m3 7 6-3 6 3 6-3v16l-6 3-6-3-6 3V7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 4v16M15 7v16" stroke="currentColor" stroke-width="1.6"/></svg></span>DroneMap AI</a>
+      <nav aria-label="Main navigation"><a class="desktop" href="#workflow">Workflow</a><a href="https://github.com/k-m-rahaman/DroneMap_AI_2.0/blob/main/docs/SIH_DEMO.md">SIH guide</a><a href="https://github.com/k-m-rahaman/DroneMap_AI_2.0">GitHub ↗</a></nav>
+    </div>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div>
+        <div class="eyebrow"><span class="dot" aria-hidden="true"></span>GeoVision · SIH26012</div>
+        <h1 id="hero-title">From imagery<br>to <span>reviewed<br>survey records.</span></h1>
+        <p class="lead">Map individual buildings, refine their boundaries and document your survey. Use satellite imagery today and georeferenced drone imagery when it is available.</p>
+        <div class="actions">
+          <a id="live-demo" class="button primary" href="https://dont-pharmacies-claire-ellis.trycloudflare.com" data-live-demo-url="https://dont-pharmacies-claire-ellis.trycloudflare.com">Open SIH demo <span aria-hidden="true">↗</span></a>
+          <a class="button secondary" href="https://github.com/k-m-rahaman/DroneMap_AI_2.0/archive/refs/heads/main.zip">Download the app <span aria-hidden="true">↓</span></a>
+        </div>
+        <p class="availability" id="demo-availability">The live demo is a temporary, laptop-hosted session. This page and the downloadable source remain available when the session ends.</p>
+      </div>
+      <div class="map-card" role="img" aria-label="Illustration of separate building outlines in a neighborhood, not actual detection output">
+        <svg viewBox="0 0 480 458" fill="none" aria-hidden="true">
+          <defs><pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" stroke="#cad8c4" stroke-width=".6"/></pattern></defs>
+          <rect width="480" height="458" fill="#e3ebdd"/><rect width="480" height="458" fill="url(#grid)"/>
+          <path d="M-20 255 500 73M104-20l166 500" stroke="#f6f6ed" stroke-width="39"/><path d="M-20 255 500 73M104-20l166 500" stroke="#bdccbb" stroke-width="1.5" stroke-dasharray="7 8"/>
+          <path d="m320 263 200 97" stroke="#f6f6ed" stroke-width="29"/><path d="m320 263 200 97" stroke="#bdccbb" stroke-width="1.5" stroke-dasharray="7 8"/>
+          <g fill="#b3c8ad" stroke="#6b8f73" stroke-width="1.4"><path d="m38 115 49-17 18 54-49 17Z"/><path d="m183 67 58-19 17 51-58 20Z"/><path d="m276 59 53-18 21 62-53 18Z"/><path d="m223 172 56-20 20 58-56 20Z"/><path d="m322 135 59-20 24 69-59 20Z"/><path d="m44 294 65-23 21 62-65 23Z"/><path d="m139 271 35-12 22 64-35 12Z"/><path d="m290 275 56-19 19 55-56 19Z"/><path d="m379 227 48-17 17 49-48 17Z"/></g>
+          <g fill="#c8e588" fill-opacity=".32" stroke="#2c7860" stroke-width="2.3" stroke-linejoin="round"><path d="m183 67 58-19 17 51-58 20Z"/><path d="m276 59 53-18 21 62-53 18Z"/><path d="m223 172 56-20 20 58-56 20Z"/><path d="m322 135 59-20 24 69-59 20Z"/><path d="m290 275 56-19 19 55-56 19Z"/></g>
+          <path d="M26 68h425v284H26z" stroke="#7b9c75" stroke-width="1.3" stroke-dasharray="6 5"/>
+          <g fill="#1c6652"><circle cx="223" cy="172" r="4"/><circle cx="279" cy="152" r="4"/><circle cx="299" cy="210" r="4"/><circle cx="243" cy="230" r="4"/></g>
+          <g fill="#5e8b67" fill-opacity=".35"><circle cx="56" cy="68" r="15"/><circle cx="420" cy="69" r="22"/><circle cx="417" cy="102" r="12"/><circle cx="25" cy="378" r="24"/><circle cx="375" cy="355" r="19"/></g>
+        </svg>
+        <div class="map-chip"><span class="dot" aria-hidden="true"></span>Building &amp; parcel workspace</div>
+        <div class="map-label"><div><strong>Every boundary stays reviewable</strong><span>Detect · correct · document</span></div><span class="tag">ILLUSTRATION</span></div>
+      </div>
+    </section>
+    <section id="workflow" class="section" aria-labelledby="workflow-title">
+      <h2 class="section-title" id="workflow-title">One connected survey workflow</h2>
+      <p class="intro">AI suggests boundaries. A surveyor checks the result and keeps a traceable record of the changes.</p>
+      <div class="workflow">
+        <article class="step"><div class="step-number">01 / MAP</div><h3>Choose your imagery</h3><p>Select a neighborhood on the map or import a georeferenced orthomosaic. Keep its source, extent and coordinate information with the survey.</p></article>
+        <article class="step"><div class="step-number">02 / REVIEW</div><h3>Refine each building</h3><p>Run building detection, inspect individual outlines and correct vertices. Review overlapping features and keep buildings distinct from parcels.</p></article>
+        <article class="step"><div class="step-number">03 / DOCUMENT</div><h3>Save usable records</h3><p>Retain version history and measured area/perimeter. Export GeoJSON, CSV and survey PDFs for review and further GIS work.</p></article>
+      </div>
+    </section>
+    <section class="section detail-grid" aria-labelledby="drone-title">
+      <div><h2 class="section-title" id="drone-title">Ready for the imagery.<br>Clear about the hardware.</h2><p class="intro">The local Drone section brings planning and compatible telemetry into the same workspace.</p><ul class="features"><li>Read-only MAVLink telemetry over UDP, TCP or serial.</li><li>Coverage-route preview for supported convex survey areas.</li><li>QGroundControl plan export for a pilot to configure and review.</li><li>Georeferenced imagery import after capture and orthomosaic processing.</li></ul></div>
+      <aside class="panel" aria-labelledby="demo-title"><div class="status-row"><span class="dot" aria-hidden="true"></span>Public demonstration</div><h2 id="demo-title">Explore without an account</h2><p>When the live session is running, each visitor gets a temporary workspace. Use sample data, try the map and review workflow, and download your example results.</p><p>Physical drone connections are disabled in the public demo. Actual flight, camera capture and raw-photo stitching are not implemented. Local hardware compatibility still needs a field test.</p><p class="small">The demo runs on the team's laptop. Its HTTPS address can change after a restart and stops working when the laptop or tunnel goes offline. <a href="https://github.com/k-m-rahaman/DroneMap_AI_2.0/blob/main/docs/DEPLOYMENT.md">Run your own local copy ↗</a></p></aside>
+    </section>
+    <section class="section" aria-labelledby="resources-title"><h2 class="section-title" id="resources-title">Build on a transparent foundation</h2><p class="intro">Follow the demonstration, inspect the implementation or evaluate detection against independently labeled imagery.</p><div class="resources"><a class="resource" href="https://github.com/k-m-rahaman/DroneMap_AI_2.0/blob/main/docs/SIH_DEMO.md"><strong>SIH walkthrough <span aria-hidden="true">↗</span></strong><p>A five-minute presentation flow, rehearsal checklist and fallback steps.</p></a><a class="resource" href="https://github.com/k-m-rahaman/DroneMap_AI_2.0"><strong>Source &amp; installation <span aria-hidden="true">↗</span></strong><p>Python application, setup instructions, tests and model checkpoint.</p></a><a class="resource" href="https://github.com/k-m-rahaman/DroneMap_AI_2.0/blob/main/docs/ACCURACY.md"><strong>Accuracy evaluation <span aria-hidden="true">↗</span></strong><p>Reference labels, geographic test splits and reproducible metrics.</p></a></div><div class="disclaimer"><p><strong>A survey prototype with human review.</strong> A detected roof does not establish a legal parcel or ownership. PDF records are survey evidence, not title deeds or government certificates.</p><p>The supplied building model is unchanged in this release. Local field accuracy has not been independently measured. Model confidence and software test results must not be presented as accuracy scores.</p></div></section>
+  </main>
+  <footer><span>GeoVision · Team 171712 · SIH26012</span><span><a href="https://github.com/k-m-rahaman/DroneMap_AI_2.0/issues">Report an issue</a> · Third-party model, software and imagery terms apply.</span></footer>
+  <script>
+    // Set this single attribute when a new temporary session is verified.
+    const demoLink = document.getElementById('live-demo');
+    const demoUrl = demoLink.dataset.liveDemoUrl;
+    if (/^https:\/\/[a-z0-9-]+\.trycloudflare\.com\/?$/i.test(demoUrl)) {
+      demoLink.href = demoUrl;
+      demoLink.removeAttribute('aria-disabled');
+      demoLink.innerHTML = 'Open the SIH demo <span aria-hidden="true">↗</span>';
+    }
+  </script>
+</body>
+</html>
