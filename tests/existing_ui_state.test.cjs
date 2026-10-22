@@ -22,6 +22,14 @@ function harness(sharedStorage=storage()){
 }
 function feature(name='House',id='f1'){return {type:'Feature',id,geometry:{type:'Polygon',coordinates:[[[1,1],[1.001,1],[1.001,1.001],[1,1.001],[1,1]]]},properties:{name,feature_type:'building',area_sqm:100,perimeter_m:40,version:1,status:'draft'}};}
 function entry(f=feature()){return {feature:f,layer:{toGeoJSON:precision=>{assert.equal(precision,false);return {geometry:f.geometry};},setPopupContent(){},setStyle(){}},saved:false,dirty:true,revision:0,measureSequence:0,measurement:null,saving:false,fields:{name:f.properties.name,owner:''},idempotencyKey:'stable-request'};}
+function reportHarness(){
+    const h=harness(),objectURLs=[],downloads=[],revoked=[],timers=[],createElement=h.context.document.createElement;
+    h.context.document.body=h.element('body');
+    h.context.document.createElement=tag=>{const el=createElement();if(tag==='a')el.click=()=>downloads.push({href:el.href,name:el.download});return el;};
+    h.context.URL={createObjectURL:blob=>{objectURLs.push(blob);return 'blob:test-'+objectURLs.length;},revokeObjectURL:url=>revoked.push(url)};
+    h.context.setTimeout=(callback,delay)=>{timers.push({callback,delay});return timers.length;};
+    return {...h,objectURLs,downloads,revoked,timers};
+}
 
 test('public demo opens an isolated survey workspace without requesting an email or password',async()=>{
     const h=harness(),requests=[],project={id:'demo-project',name:'SIH visitor survey'};
@@ -68,6 +76,40 @@ test('demo report descriptions remain accurate after language changes and local 
     const h=harness();h.context.applyDeploymentStatus({public_demo:true});h.context.changeLanguage('bn');
     assert.match(h.element('feat3-d').textContent,/Demo reports have no public verification link/);assert.equal(h.element('inspectorReportBtn').textContent,'↓ Survey PDF');
     h.context.applyDeploymentStatus({public_demo:false});assert.equal(h.element('feat3-d').textContent,h.run('i18n.bn.feat3_d'));assert.equal(h.element('inspectorReportBtn').textContent,'↓ Survey PDF with QR');
+});
+
+test('survey reports fetch the authenticated PDF bytes and trigger a download without opening a popup',async()=>{
+    const h=reportHarness(),requests=[],pdf=new Blob(['%PDF-1.7\nreal report bytes'],{type:'application/pdf'});h.state.user={id:'surveyor'};
+    h.context.window.open=()=>{throw Error('Reports must not depend on popups');};
+    h.context.fetch=async(path,options)=>{requests.push({path,options});return {ok:true,blob:async()=>pdf};};
+    await h.context.openReport('survey/id');
+    assert.equal(requests.length,1);assert.equal(requests[0].path,'/api/features/survey%2Fid/report.pdf');assert.equal(requests[0].options.credentials,'same-origin');assert.equal('responseType' in requests[0].options,false);
+    assert.equal(h.objectURLs[0],pdf);assert.deepEqual(h.downloads,[{href:'blob:test-1',name:'dronemap-survey-survey_id.pdf'}]);assert.match(h.context.lastToast,/download started/);
+    assert.equal(h.timers[0].delay,1000);h.timers[0].callback();assert.deepEqual(h.revoked,['blob:test-1']);
+});
+
+test('failed report requests show the server error and never download an error payload',async()=>{
+    const h=reportHarness();h.state.user={id:'surveyor'};h.context.fetch=async()=>({ok:false,status:404,json:async()=>({detail:'Survey record no longer exists'})});
+    await h.context.openReport('missing');assert.equal(h.context.lastToast,'Survey record no longer exists');assert.deepEqual(h.downloads,[]);assert.deepEqual(h.objectURLs,[]);
+});
+
+test('an expired report session follows normal session recovery instead of downloading a login error',async()=>{
+    const h=reportHarness();h.state.user={id:'surveyor'};h.state.project={id:'p1'};h.state.role='official';h.state.entries.set('draft',entry());
+    h.context.fetch=async()=>({ok:false,status:401,json:async()=>({detail:'Session expired'})});
+    await h.context.openReport('report');assert.equal(h.state.user,null);assert.match(h.context.lastToast,/session expired.*recover unsaved boundaries/i);assert.ok(h.storage.getItem('dronemap.recovery.v1:surveyor:p1'));
+    assert.deepEqual(h.downloads,[]);assert.deepEqual(h.objectURLs,[]);
+});
+
+test('a report arriving after an account change is discarded without creating a download URL',async()=>{
+    const h=reportHarness(),pending=deferred();h.state.user={id:'first-surveyor'};h.context.fetch=()=>pending.promise;
+    const download=h.context.openReport('report');h.context.clearWorkspace();h.state.user={id:'other-surveyor'};
+    pending.resolve({ok:true,blob:async()=>new Blob(['%PDF-1.7\nprivate report'],{type:'application/pdf'})});await download;
+    assert.deepEqual(h.downloads,[]);assert.deepEqual(h.objectURLs,[]);assert.equal(h.context.lastToast,undefined);
+});
+
+test('a successful HTTP response containing invalid PDF content is not saved as a survey document',async()=>{
+    const h=reportHarness();h.state.user={id:'surveyor'};h.context.fetch=async()=>({ok:true,blob:async()=>new Blob(['<html>Not a report</html>'],{type:'application/pdf'})});
+    await h.context.openReport('report');assert.match(h.context.lastToast,/did not return a survey PDF/);assert.deepEqual(h.downloads,[]);assert.deepEqual(h.objectURLs,[]);
 });
 
 test('returning demo visitors reuse their active workspace rather than creating another visitor',async()=>{
