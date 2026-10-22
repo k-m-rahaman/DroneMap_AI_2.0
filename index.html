@@ -234,6 +234,7 @@
                             <div class="workflow-label"><span class="step-dot">2</span><h3>Detect building footprints</h3></div>
                             <p class="muted">Scan satellite imagery or select a georeferenced source from your library.</p>
                             <div class="scan-source"><span id="scanSourceLabel">Satellite map imagery</span><button class="text-button" onclick="switchTab('sources')">Change</button></div>
+                            <p id="mapImageryStatus" class="micro" role="status" aria-live="polite"></p>
                             <div class="field-row"><label>Confidence threshold<input id="inputCalibration" type="number" min="0.05" max="0.95" step="0.05" value="0.5"></label><label>Minimum area · m²<input id="minAreaInput" type="number" min="0" max="10000" step="1" value="4"></label></div>
                             <button id="processBtn" class="button primary full"><span class="scan-icon">⌕</span><span id="btnText">Detect buildings</span><span>↗</span></button>
                             <p id="scanLimits" class="micro">AI suggestions require boundary review. Roof outlines do not establish ownership boundaries.</p>

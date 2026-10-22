@@ -21,7 +21,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
 
 import numpy as np
@@ -50,10 +50,15 @@ MAX_FEATURES = 1000
 MAP_TILE_SIZE = 256
 MAX_MAP_TILES = 64
 MAX_MAP_TILE_LEVEL = 19
+MAX_MAP_COVERAGE_LEVELS = 4
 # Esri World Imagery's published Web Mercator cache grid (MapServer tileInfo).
 MAP_TILE_ORIGIN_X = -20037508.342787
 MAP_TILE_ORIGIN_Y = 20037508.342787
 MAP_TILE_BASE_RESOLUTION = 156543.03392800014
+
+
+class MapCoverageUnavailable(RuntimeError):
+    """The provider explicitly has no cached imagery at this tile level."""
 
 
 def _resampled_transform(transform, old_width, old_height, new_width, new_height):
@@ -164,10 +169,22 @@ class SurveyImagery:
     @staticmethod
     def _download(url, *, max_bytes, timeout=30):
         request = Request(url, headers={"User-Agent": "DroneMap-Urban-Survey/3.0", "Accept": "application/json,image/png,image/jpeg"})
+        parsed = urlparse(url)
+        # Missing ArcGIS cached tiles otherwise arrive as a successful gray
+        # placeholder image. Only a deliberately requested cache tile can turn
+        # a 404 into a coverage fallback; exports and other failures must fail.
+        coverage_request = (url.startswith(ESRI_SERVICE + "/tile/")
+            and parse_qs(parsed.query).get("blankTile") == ["false"])
         try:
             with urlopen(request, timeout=timeout) as response:
+                if coverage_request and str(response.headers.get("blank-tile", "")).lower() == "true":
+                    raise MapCoverageUnavailable("Esri reports no imagery coverage for this cached tile.")
                 data = response.read(max_bytes + 1)
-        except (HTTPError, URLError, TimeoutError, OSError) as exc:
+        except HTTPError as exc:
+            if coverage_request and exc.code == 404:
+                raise MapCoverageUnavailable("Esri reports no imagery coverage for this cached tile.") from exc
+            raise RuntimeError("Esri imagery service could not be reached. Check the connection and try a smaller area.") from exc
+        except (URLError, TimeoutError, OSError) as exc:
             raise RuntimeError("Esri imagery service could not be reached. Check the connection and try a smaller area.") from exc
         if len(data) > max_bytes:
             raise RuntimeError("Imagery service response exceeded the download limit.")
@@ -505,7 +522,7 @@ class SurveyImagery:
             "imagery_method": "mapserver_export", "georeference_method": "Esri export response extent in EPSG:3857"}
 
     @staticmethod
-    def _tile_plan(projected_bounds):
+    def _tile_plan(projected_bounds, max_level=MAX_MAP_TILE_LEVEL):
         """Choose a real cache level and cover the AOI on that level's pixel grid.
 
         The selected level comes from the physical AOI and the cache grid;
@@ -516,7 +533,7 @@ class SurveyImagery:
         xmin, ymin, xmax, ymax = projected_bounds
         if not all(math.isfinite(v) for v in projected_bounds) or xmin >= xmax or ymin >= ymax:
             raise ValueError("A valid projected map extent is required.")
-        for level in range(MAX_MAP_TILE_LEVEL, -1, -1):
+        for level in range(min(MAX_MAP_TILE_LEVEL, max_level), -1, -1):
             resolution = MAP_TILE_BASE_RESOLUTION / (2 ** level)
             world_pixels = MAP_TILE_SIZE * (2 ** level)
             left = max(0, math.floor((xmin - MAP_TILE_ORIGIN_X) / resolution))
@@ -536,33 +553,55 @@ class SurveyImagery:
         raise RuntimeError("The selected area cannot be covered within the 2048-pixel / 64-tile map limit.")
 
     def _fetch_map_tiles(self, projected_bounds):
-        """Mosaic genuine cached tiles from the fixed official Esri service."""
-        plan = self._tile_plan(projected_bounds)
-        columns = range(plan["min_column"], plan["max_column"] + 1)
-        rows = range(plan["min_row"], plan["max_row"] + 1)
-        mosaic = Image.new("RGB", (len(columns) * MAP_TILE_SIZE, len(rows) * MAP_TILE_SIZE))
-        def fetch_tile(column, row):
-            url = f"{ESRI_SERVICE}/tile/{plan['level']}/{row}/{column}"
-            contents = self._download(url, max_bytes=2 * 1024 * 1024, timeout=20)
-            try:
-                with Image.open(io.BytesIO(contents)) as tile:
-                    if tile.size != (MAP_TILE_SIZE, MAP_TILE_SIZE):
-                        raise RuntimeError("Esri returned a tile with unexpected dimensions.")
-                    return column, row, tile.convert("RGB").copy()
-            except (UnidentifiedImageError, OSError) as exc:
-                raise RuntimeError("Esri returned an unreadable cached tile; no partial mosaic was used.") from exc
-        with ThreadPoolExecutor(max_workers=4, thread_name_prefix="survey-map-tile") as executor:
-            futures = [executor.submit(fetch_tile, column, row) for row in rows for column in columns]
-            try:
+        """Mosaic a complete cache level, using at most four native levels.
+
+        A missing tile discards the entire level. Never mix zoom levels, resize
+        lower-resolution pixels, or mistake the provider's blank tile for an
+        empty neighborhood. Connection and decode failures do not lower zoom.
+        """
+        initial_plan = self._tile_plan(projected_bounds)
+        unavailable_levels = []
+        for maximum_level in range(initial_plan["level"], max(-1, initial_plan["level"] - MAX_MAP_COVERAGE_LEVELS), -1):
+            plan = self._tile_plan(projected_bounds, max_level=maximum_level)
+            columns = range(plan["min_column"], plan["max_column"] + 1)
+            rows = range(plan["min_row"], plan["max_row"] + 1)
+            mosaic = Image.new("RGB", (len(columns) * MAP_TILE_SIZE, len(rows) * MAP_TILE_SIZE))
+
+            def fetch_tile(column, row):
+                url = f"{ESRI_SERVICE}/tile/{plan['level']}/{row}/{column}?blankTile=false"
+                contents = self._download(url, max_bytes=2 * 1024 * 1024, timeout=20)
+                try:
+                    with Image.open(io.BytesIO(contents)) as tile:
+                        if tile.size != (MAP_TILE_SIZE, MAP_TILE_SIZE):
+                            raise RuntimeError("Esri returned a tile with unexpected dimensions.")
+                        return column, row, tile.convert("RGB").copy()
+                except (UnidentifiedImageError, OSError) as exc:
+                    raise RuntimeError("Esri returned an unreadable cached tile; no partial mosaic was used.") from exc
+
+            missing = False
+            failure = None
+            with ThreadPoolExecutor(max_workers=4, thread_name_prefix="survey-map-tile") as executor:
+                futures = [executor.submit(fetch_tile, column, row) for row in rows for column in columns]
                 for future in as_completed(futures):
-                    column, row, image = future.result()
-                    mosaic.paste(image, ((column - plan["min_column"]) * MAP_TILE_SIZE, (row - plan["min_row"]) * MAP_TILE_SIZE))
-            except Exception as exc:
-                for future in futures:
-                    future.cancel()
-                if isinstance(exc, RuntimeError):
-                    raise
-                raise RuntimeError(f"Cached tile download failed: {str(exc)[:180]}") from exc
+                    try:
+                        column, row, image = future.result()
+                        mosaic.paste(image, ((column - plan["min_column"]) * MAP_TILE_SIZE, (row - plan["min_row"]) * MAP_TILE_SIZE))
+                    except MapCoverageUnavailable:
+                        missing = True
+                    except Exception as exc:
+                        # Collect the other results too: a missing tile cannot
+                        # hide a simultaneous connection or corrupt-image error.
+                        failure = failure or exc
+            if failure is not None:
+                if isinstance(failure, RuntimeError):
+                    raise failure
+                raise RuntimeError(f"Cached tile download failed: {str(failure)[:180]}") from failure
+            if missing:
+                unavailable_levels.append(plan["level"])
+                continue
+            break
+        else:
+            raise RuntimeError("No complete imagery coverage was available at the four attempted cache levels. No scan or source was saved; import georeferenced imagery or choose another area.")
         crop_left = plan["left"] - plan["min_column"] * MAP_TILE_SIZE
         crop_top = plan["top"] - plan["min_row"] * MAP_TILE_SIZE
         cropped = mosaic.crop((crop_left, crop_top, crop_left + plan["width"], crop_top + plan["height"]))
@@ -571,7 +610,10 @@ class SurveyImagery:
             0, -resolution, MAP_TILE_ORIGIN_Y - plan["top"] * resolution]
         return np.array(cropped), affine, {
             "imagery_method": "cached_tile_mosaic", "georeference_method": "Esri Web Mercator cache grid, cropped at actual raster pixel edges",
-            "tile_level": plan["level"], "tile_count": plan["tile_count"], "tile_size": MAP_TILE_SIZE,
+            "tile_level": plan["level"], "actual_tile_level": plan["level"], "requested_tile_level": initial_plan["level"],
+            "coverage_levels_unavailable": unavailable_levels,
+            "coverage_fallback_reason": ("Higher-resolution cached imagery is unavailable; the entire area uses a complete lower-resolution native cache level." if unavailable_levels else None),
+            "tile_count": plan["tile_count"], "tile_size": MAP_TILE_SIZE,
             "native_tile_spacing_3857_m": resolution, "tile_range": {
                 "columns": [plan["min_column"], plan["max_column"]], "rows": [plan["min_row"], plan["max_row"]]},
             "tile_origin_3857": [MAP_TILE_ORIGIN_X, MAP_TILE_ORIGIN_Y], "resampled": False,
