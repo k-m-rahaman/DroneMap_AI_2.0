@@ -1,0 +1,6 @@
+# Reproducible API, geometry, backup and actual MAVLink packet tests.
+# AI behavior is isolated with fixtures; CI does not download Torch or weights.
+-r requirements.txt
+-r requirements-drone.txt
+pytest==8.4.2
+httpx==0.28.1

@@ -1,0 +1,7 @@
+# The shipped checkpoint records this Ultralytics version.
+# CPU is the default. A matching CUDA build can be installed separately.
+# These engine versions were exercised with the supplied checkpoint.
+-r requirements.txt
+torch==2.14.1
+torchvision==0.29.1
+ultralytics==8.4.132

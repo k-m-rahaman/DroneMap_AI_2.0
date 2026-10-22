@@ -1,0 +1,3 @@
+# Optional real MAVLink telemetry (ArduPilot/PX4 compatible links).
+pymavlink==2.4.50
+pyserial==3.5
