@@ -1,0 +1,38 @@
+name: Software checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DRONEMAP_DATA_DIR: /tmp/dronemap-tests
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUTF8: "1"
+      YOLO_AUTOINSTALL: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-drone.txt
+            requirements-dev.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install core and test dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Backend, geometry, backup and telemetry checks
+        run: python -m pytest tests -q
+      - name: Browser state checks
+        run: node --test tests/*.test.cjs

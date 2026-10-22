@@ -1,8 +1,12 @@
-fastapi
-uvicorn
-python-multipart
-ultralytics
-opencv-python-headless
-fpdf2
-qrcode
-pillow
+# Core workspace: Python 3.10-3.12. AI inference is an optional installation.
+fastapi==0.143.3
+uvicorn==0.38.0
+python-multipart==0.0.32
+numpy==2.2.6
+pillow==11.3.0
+shapely==2.1.2
+pyproj==3.7.1
+rasterio==1.4.3
+fpdf2==2.8.9
+qrcode==8.2
+uharfbuzz==0.56.3
