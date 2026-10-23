@@ -158,6 +158,56 @@ def test_main_never_tunnels_private_backend_and_cleans_stale_url(monkeypatch, tm
     assert not (runtime / "public-url.txt").exists()
 
 
+def test_tunnel_api_error_is_never_advertised_as_public_demo(tmp_path, capsys):
+    assert serve_demo.relay_tunnel_output([
+        'failed to request quick Tunnel: Post "https://api.trycloudflare.com/tunnel": timeout\n',
+        'Registered tunnel connection\n',
+    ], tmp_path) is False
+    assert not (tmp_path / "public-url.txt").exists()
+    assert "PUBLIC SIH DEMO:" not in capsys.readouterr().out
+
+
+def test_candidate_url_is_not_published_before_registration(tmp_path):
+    assert serve_demo.relay_tunnel_output([
+        '| https://example-demo.trycloudflare.com |\n',
+    ], tmp_path) is False
+    assert not (tmp_path / "public-url.txt").exists()
+
+
+def test_registered_tunnel_publishes_visitor_url_only_once(tmp_path, capsys):
+    def logs():
+        yield '| https://example-demo.trycloudflare.com |\n'
+        assert not (tmp_path / "public-url.txt").exists()
+        yield 'INF Registered tunnel connection connIndex=0\n'
+        assert (tmp_path / "public-url.txt").read_text().strip() == "https://example-demo.trycloudflare.com"
+        yield 'INF Registered tunnel connection connIndex=0\n'
+    assert serve_demo.relay_tunnel_output(logs(), tmp_path) is True
+    assert capsys.readouterr().out.count("PUBLIC SIH DEMO:") == 1
+
+
+@pytest.mark.parametrize("logs", [
+    ['| https://example-demo.trycloudflare.com |\n', 'ERR Unauthorized: Tunnel not found\n'],
+    ['| https://example-demo.trycloudflare.com |\n'],
+    ['| https://example-demo.trycloudflare.com |\n', 'INF Registered tunnel connection\n'],
+    ['| https://example-demo.trycloudflare.com |\n', 'INF Registered tunnel connection\n', 'ERR Unauthorized: Tunnel not found\n'],
+])
+def test_tunnel_failure_or_eof_stops_children_and_clears_url(monkeypatch, tmp_path, logs):
+    monkeypatch.setattr(serve_demo, "ROOT", tmp_path)
+    monkeypatch.setattr(serve_demo.sys, "argv", ["serve_demo.py", "--cloudflared", str(tmp_path / "cloudflared.exe")])
+    monkeypatch.setattr(serve_demo.socket, "socket", MagicMock())
+    monkeypatch.setattr(serve_demo, "urlopen", lambda *args, **kwargs: io.BytesIO(b'{"public_demo":true}'))
+    app, tunnel = child(), child()
+    tunnel.stdout = iter(logs)
+    tunnel.wait.return_value = 0
+    supervisor = Mock()
+    supervisor.start.side_effect = [app, tunnel]
+    monkeypatch.setattr(serve_demo, "ChildSupervisor", Mock(return_value=supervisor))
+    with pytest.raises(RuntimeError, match="expired|stopped"):
+        serve_demo.main()
+    supervisor.close.assert_called_once()
+    assert not (tmp_path / ".demo-runtime" / "public-url.txt").exists()
+
+
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows job lifetime integration")
 def test_windows_parent_termination_kills_owned_child(tmp_path):
     """Force-exit bypasses Python cleanup, like closing its console window."""

@@ -3,7 +3,7 @@
 **SIH26012 · AI-Based Automated Urban Parcel Mapping and Cadastral Feature Extraction System using Drone Imagery**
 
 <!-- LIVE_DEMO_LINK -->
-**[Open the live SIH demo](https://monday-tubes-players-dental.trycloudflare.com)** · [Project page](https://k-m-rahaman.github.io/DroneMap_AI_2.0/)
+**[Open the live SIH demo](https://motorcycles-badly-estates-usr.trycloudflare.com)** · [Project page](https://k-m-rahaman.github.io/DroneMap_AI_2.0/)
 
 The live app is a temporary, free laptop-hosted demonstration. Keep the demo process and internet connection running; restarting creates a new address. Use sample data only. The downloadable source and project page remain available when the live session ends.
 
