@@ -1,0 +1,117 @@
+{
+  "format": "dronemap-sih-rehearsal",
+  "version": 1,
+  "created_at": "2026-10-23T11:14:36.120005+00:00",
+  "passed": true,
+  "notice": "Workflow rehearsal only; no measured detection accuracy, drone capture, flight or legal boundary validation.",
+  "checks": [
+    {
+      "name": "derived_geotiff_retains_native_pixels",
+      "passed": true,
+      "detail": {
+        "width": 896,
+        "height": 647,
+        "crs": "EPSG:3857"
+      }
+    },
+    {
+      "name": "isolated_guest_entry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "geotiff_import_native_geometry",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "real_offline_multi_building_inference",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "multiple_buildings_saved_and_retry_is_idempotent",
+      "passed": true,
+      "detail": {
+        "saved": 3
+      }
+    },
+    {
+      "name": "edit_history_and_stale_update_protection",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "duplicate_proposals_reconciled",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "pdf_export_structural_validation",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "geojson_csv_exports_reopen",
+      "passed": true,
+      "detail": {
+        "records": 3
+      }
+    },
+    {
+      "name": "illustrative_parcel_import_preview_and_save",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "coverage_route_and_qgc_plan_export",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "physical_drone_access_disabled",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "saved_records_survive_app_restart",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "offline_external_network_attempts_zero",
+      "passed": true,
+      "detail": null
+    }
+  ],
+  "metrics": {
+    "building_proposals": 76,
+    "distinct_valid_geometries": 76,
+    "scan_request_seconds": 11.078,
+    "model_pipeline_seconds": 7.08,
+    "native_windows": 2,
+    "pdf": {
+      "pages": 2,
+      "bytes": 35791,
+      "xref_objects": 37,
+      "visual_layout_verified": false
+    },
+    "planning_waypoints": 20,
+    "external_network_attempts": 0,
+    "total_seconds": 14.843
+  },
+  "limitations": [
+    "A saved map image was wrapped as a GeoTIFF; no actual drone or new imagery acquisition was used.",
+    "Model proposal counts and confidence are not accuracy measurements; independent reference labels are still required.",
+    "This exercises the backend through an in-process HTTP client; browser usability and PDF appearance require separate checks.",
+    "Raw imagery, polygons, temporary sessions and workspace database remain private and are not redistributed."
+  ],
+  "model_sha256": "ed3edc35cdf681cc0563f77c8334656c3f21aebd49651bc3a96fbeee2220b589",
+  "source": {
+    "origin": "existing public-demo map sample",
+    "attribution": "Esri World Imagery; Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+    "crs": "EPSG:3857",
+    "pixel_resampling": false,
+    "raster_sha256": "7cc19f919053536527debbd25a9c86ea4b3c27ce5b1bcd6195736ee7690fe14d"
+  }
+}

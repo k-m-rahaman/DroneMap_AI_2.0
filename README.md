@@ -3,7 +3,7 @@
 **SIH26012 · AI-Based Automated Urban Parcel Mapping and Cadastral Feature Extraction System using Drone Imagery**
 
 <!-- LIVE_DEMO_LINK -->
-**[Open the live SIH demo](https://motorcycles-badly-estates-usr.trycloudflare.com)** · [Project page](https://k-m-rahaman.github.io/DroneMap_AI_2.0/)
+**[Open the live SIH demo](https://brakes-bag-acrobat-bandwidth.trycloudflare.com)** · [Project page](https://k-m-rahaman.github.io/DroneMap_AI_2.0/)
 
 The live app is a temporary, free laptop-hosted demonstration. Keep the demo process and internet connection running; restarting creates a new address. Use sample data only. The downloadable source and project page remain available when the live session ends.
 
@@ -16,6 +16,9 @@ DroneMap AI is GeoVision's building-survey and parcel-review workspace. It detec
 | [Five-minute SIH walkthrough](docs/SIH_DEMO.md) | Rehearsal, success criteria, truthful capability limits and offline fallback |
 | [Installation and public demo](docs/DEPLOYMENT.md) | Portable setup, separate guest demo and temporary HTTPS link |
 | [Accuracy evaluation](docs/ACCURACY.md) | Independent labels, geographic splits and reproducible metrics |
+| [Independent labeling workspace](docs/BENCHMARK_WORKFLOW.md) | Freeze an AOI and raw proposals; require independent labels and review before scoring |
+| [Offline workflow rehearsal](docs/REHEARSAL.md) | Repeat real local inference, edits, exports and planning with isolated sample data |
+| [SIH readiness and judge questions](docs/SIH_READINESS.md) | Architecture, evidence, presentation answers and remaining field validation |
 
 | Available workflow | Current boundary |
 | --- | --- |
