@@ -28,7 +28,7 @@
         <h1 id="hero-title">From imagery<br>to <span>reviewed<br>survey records.</span></h1>
         <p class="lead">Map individual buildings, refine their boundaries and document your survey. Use satellite imagery today and georeferenced drone imagery when it is available.</p>
         <div class="actions">
-          <a id="live-demo" class="button primary" href="https://monday-tubes-players-dental.trycloudflare.com" data-live-demo-url="https://monday-tubes-players-dental.trycloudflare.com">Open SIH demo <span aria-hidden="true">↗</span></a>
+          <a id="live-demo" class="button primary" href="https://motorcycles-badly-estates-usr.trycloudflare.com" data-live-demo-url="https://motorcycles-badly-estates-usr.trycloudflare.com">Open SIH demo <span aria-hidden="true">↗</span></a>
           <a class="button secondary" href="https://github.com/k-m-rahaman/DroneMap_AI_2.0/archive/refs/heads/main.zip">Download the app <span aria-hidden="true">↓</span></a>
         </div>
         <p class="availability" id="demo-availability">The live demo is a temporary, laptop-hosted session. This page and the downloadable source remain available when the session ends.</p>
@@ -69,10 +69,14 @@
     // Set this single attribute when a new temporary session is verified.
     const demoLink = document.getElementById('live-demo');
     const demoUrl = demoLink.dataset.liveDemoUrl;
-    if (/^https:\/\/[a-z0-9-]+\.trycloudflare\.com\/?$/i.test(demoUrl)) {
+    if (/^https:\/\/(?!api\.)[a-z0-9-]+\.trycloudflare\.com\/?$/i.test(demoUrl)) {
       demoLink.href = demoUrl;
       demoLink.removeAttribute('aria-disabled');
       demoLink.innerHTML = 'Open the SIH demo <span aria-hidden="true">↗</span>';
+    } else {
+      demoLink.removeAttribute('href');
+      demoLink.setAttribute('aria-disabled', 'true');
+      demoLink.textContent = 'Live demo currently offline';
     }
   </script>
 </body>
