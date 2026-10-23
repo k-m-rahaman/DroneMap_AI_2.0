@@ -162,6 +162,27 @@ def download_tunnel():
     return target
 
 
+def relay_tunnel_output(lines, runtime):
+    """Advertise only a visitor URL whose tunnel has actually registered."""
+    candidate = None
+    registered = False
+    published = False
+    for line in lines:
+        print(line, end="", flush=True)
+        if "unauthorized: tunnel not found" in line.lower():
+            raise RuntimeError("The temporary tunnel expired. Restart this launcher to request a new public URL.")
+        match = re.search(r"https://(?!api\.)[a-z0-9-]+\.trycloudflare\.com\b", line, re.IGNORECASE)
+        if match:
+            candidate = match.group(0)
+        if "registered tunnel connection" in line.lower():
+            registered = True
+        if candidate and registered and not published:
+            (runtime / "public-url.txt").write_text(candidate + "\n", encoding="utf-8")
+            print(f"\nPUBLIC SIH DEMO: {candidate}\nKeep this window, laptop and internet running. Closing it stops the link.\n", flush=True)
+            published = True
+    return published
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8003)
@@ -207,15 +228,9 @@ def main():
             print("Local-only demo. Add --cloudflared PATH or --download-tunnel for a public link.", flush=True)
             return app.wait()
         tunnel = supervisor.start([str(tunnel_binary.resolve()),"tunnel","--no-autoupdate","--url",local], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
-        for line in tunnel.stdout:
-            print(line, end="", flush=True)
-            match = re.search(r"https://[a-z0-9-]+\.trycloudflare\.com", line)
-            if match:
-                url = match.group(0)
-                (runtime / "public-url.txt").write_text(url + "\n", encoding="utf-8")
-                print(f"\nPUBLIC SIH DEMO: {url}\nKeep this window, laptop and internet running. Closing it stops the link.\n", flush=True)
-        if tunnel.wait() != 0:
-            raise RuntimeError("The tunnel stopped. Restart this launcher to get a new public URL.")
+        relay_tunnel_output(tunnel.stdout, runtime)
+        tunnel.wait()
+        raise RuntimeError("The public tunnel stopped. Restart this launcher to request a new public URL.")
     except KeyboardInterrupt:
         print("\nStopping the temporary demo.")
     finally:
