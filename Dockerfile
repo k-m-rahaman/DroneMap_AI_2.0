@@ -11,7 +11,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     DRONEMAP_DATA_DIR=/var/lib/dronemap \
     PORT=8000
 
-RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 \
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 libgdal-dev build-essential \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 dronemap \
     && useradd --uid 10001 --gid dronemap --create-home dronemap \
