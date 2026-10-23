@@ -15,6 +15,7 @@ DroneMap AI is GeoVision's building-survey and parcel-review workspace. It detec
 | --- | --- |
 | [Five-minute SIH walkthrough](docs/SIH_DEMO.md) | Rehearsal, success criteria, truthful capability limits and offline fallback |
 | [Installation and public demo](docs/DEPLOYMENT.md) | Portable setup, separate guest demo and temporary HTTPS link |
+| [Full authenticated server app](docs/HOSTED_APP.md) | Persistent Docker deployment, private account bootstrap, HTTPS and a free-VM option |
 | [Accuracy evaluation](docs/ACCURACY.md) | Independent labels, geographic splits and reproducible metrics |
 | [Independent labeling workspace](docs/BENCHMARK_WORKFLOW.md) | Freeze an AOI and raw proposals; require independent labels and review before scoring |
 | [Offline workflow rehearsal](docs/REHEARSAL.md) | Repeat real local inference, edits, exports and planning with isolated sample data |

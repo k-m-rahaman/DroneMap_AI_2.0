@@ -1,0 +1,50 @@
+name: Hosted container checks
+
+on:
+  push:
+    paths:
+      - Dockerfile
+      - compose.yaml
+      - hosting.py
+      - main.py
+      - storage.py
+      - imagery.py
+      - geospatial.py
+      - spatial_quality.py
+      - missions.py
+      - reports.py
+      - public_demo.py
+      - index.html
+      - my_logo.png
+      - drone_bg.mp4
+      - best.pt
+      - static/**
+      - fonts/**
+      - .dockerignore
+      - deploy/Caddyfile
+      - requirements*.txt
+      - tools/serve_hosted.py
+      - tools/check_container.py
+      - tools/backup_workspace.py
+      - .github/workflows/container.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build CPU application image
+        run: docker build --tag dronemap-hosted:check .
+      - name: Validate proxy configuration
+        run: docker run --rm -e DOMAIN=survey.example.test -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: Exercise model, normal accounts and persistent volume
+        run: python3 tools/check_container.py dronemap-hosted:check

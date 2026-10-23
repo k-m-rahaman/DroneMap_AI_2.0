@@ -173,9 +173,11 @@ session cookies, signing keys, private imagery, SQLite databases or backups.
 
 Free-tier availability and quotas change. Do not assume a free plan can run the
 full AI stack, preserve uploads across restarts or provide an uptime commitment.
-There is no validated Docker build in this release. Test the application and
-storage recovery on the chosen deployment platform before presenting it as a
-supported hosted installation.
+The [authenticated server deployment](HOSTED_APP.md) provides a CPU Docker
+image, persistent-volume Compose setup, HTTPS proxy and protected owner bootstrap.
+Its container workflow checks AMD64/ARM64 builds and storage recovery. Inspect
+the workflow result for the exact commit, then verify the chosen live server
+before presenting a hosted installation as available.
 
 ## Back up and restore the private workspace
 

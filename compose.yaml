@@ -1,0 +1,38 @@
+# Operator supplies DOMAIN and bootstrap secrets in an untracked .env file.
+# DNS for DOMAIN must point at this server; inbound TCP 80/443 must be reachable.
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      DRONEMAP_PUBLIC_BASE_URL: https://${DOMAIN:?Set DOMAIN to your server hostname}
+      DRONEMAP_BOOTSTRAP_NAME: ${DRONEMAP_BOOTSTRAP_NAME:-}
+      DRONEMAP_BOOTSTRAP_EMAIL: ${DRONEMAP_BOOTSTRAP_EMAIL:-}
+      DRONEMAP_BOOTSTRAP_PASSWORD: ${DRONEMAP_BOOTSTRAP_PASSWORD:-}
+      # Only Caddy can reach this service; it replaces forwarded client headers.
+      FORWARDED_ALLOW_IPS: "*"
+    volumes:
+      - survey-data:/var/lib/dronemap
+    # The backend is reachable only from the HTTPS proxy, never a public port.
+    expose:
+      - "8000"
+    mem_limit: 4g
+    cpus: 2.0
+  web:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN to your server hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - web-data:/data
+      - web-config:/config
+    depends_on:
+      - app
+volumes:
+  survey-data:
+  web-data:
+  web-config:

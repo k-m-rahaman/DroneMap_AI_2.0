@@ -23,6 +23,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from storage import Store, feature_json, new_id, now
 
 ROOT = Path(__file__).resolve().parent
@@ -125,14 +126,23 @@ def source_json(source):
     result["preview_url"] = f"/api/sources/{source['id']}/preview"
     return result
 
-def create_app(data_dir: Path | str | None = None, imagery_service=None, drone_service=None, public_demo: bool | None = None) -> FastAPI:
+def create_app(data_dir: Path | str | None = None, imagery_service=None, drone_service=None, public_demo: bool | None = None, hosted: bool | None = None) -> FastAPI:
     from public_demo import DemoPolicy, initialize_mode, unavailable_drone, NOTICE, SESSION_SECONDS as DEMO_SECONDS, MAX_UPLOAD as DEMO_UPLOAD
     is_demo = public_demo if public_demo is not None else os.environ.get("DRONEMAP_PUBLIC_DEMO", "").casefold() in {"1", "true", "yes"}
+    is_hosted = hosted if hosted is not None else os.environ.get("DRONEMAP_HOSTED", "").casefold() in {"1", "true", "yes"}
+    if is_hosted and is_demo:
+        raise RuntimeError("Hosted authenticated mode and temporary public demo mode cannot be combined.")
     directory = data_dir or os.environ.get("DRONEMAP_DATA_DIR")
+    canonical_origin = allowed_hostname = None
+    if is_hosted:
+        from hosting import hosted_configuration, provision_owner
+        canonical_origin, allowed_hostname = hosted_configuration(directory)
     if is_demo and (not directory or Path(directory).resolve() == (ROOT / "data").resolve()):
         raise RuntimeError("Public demo requires an explicit, isolated DRONEMAP_DATA_DIR outside the private data directory.")
     store = Store(Path(directory or ROOT / "data"))
     initialize_mode(store, is_demo)
+    if is_hosted:
+        provision_owner(store, password_hash)
     demo_policy = DemoPolicy(store) if is_demo else None
     cookie_name = "dronemap_demo_session" if is_demo else COOKIE
     session_seconds = DEMO_SECONDS if is_demo else SESSION_SECONDS
@@ -145,7 +155,7 @@ def create_app(data_dir: Path | str | None = None, imagery_service=None, drone_s
             imagery_service = None
     # Ignore even injected adapters in public mode: none of their methods may
     # touch the host's private network, ports, or aircraft connections.
-    if is_demo:
+    if is_demo or is_hosted:
         drone_service = None
     elif drone_service is None:
         from drone import DroneHub
@@ -160,6 +170,7 @@ def create_app(data_dir: Path | str | None = None, imagery_service=None, drone_s
     app.state.imagery = imagery_service
     app.state.drone = drone_service
     app.state.public_demo = is_demo
+    app.state.hosted = is_hosted
     app.state.demo_policy = demo_policy
     app.state.inference_lock = threading.Lock()
     login_attempts = {}
@@ -169,7 +180,7 @@ def create_app(data_dir: Path | str | None = None, imagery_service=None, drone_s
     async def security_headers(request: Request, call_next):
         if request.method in {"POST","PUT","PATCH","DELETE"}:
             origin = request.headers.get("origin")
-            expected = urlsplit(str(request.base_url))
+            expected = urlsplit(canonical_origin or str(request.base_url))
             if origin:
                 try:
                     actual = urlsplit(origin)
@@ -204,6 +215,16 @@ def create_app(data_dir: Path | str | None = None, imagery_service=None, drone_s
             response.headers["Cache-Control"] = "no-store"
         return response
 
+    if is_hosted:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=[allowed_hostname], www_redirect=False)
+
+    @app.get("/healthz")
+    def health():
+        # A process/storage probe, not a model accuracy or inference result.
+        with store.connection() as db:
+            db.execute("SELECT 1").fetchone()
+        return {"status": "ok", "mode": "hosted" if is_hosted else "demo" if is_demo else "local"}
+
     def optional_user(request):
         token = request.cookies.get(cookie_name)
         if not token:
@@ -231,7 +252,7 @@ def create_app(data_dir: Path | str | None = None, imagery_service=None, drone_s
             if old_token:
                 db.execute("DELETE FROM sessions WHERE token_hash=?",(hashlib.sha256(old_token.encode()).hexdigest(),))
             db.execute("INSERT INTO sessions VALUES(?,?,?)",(hashlib.sha256(token.encode()).hexdigest(),user_id,time.time()+session_seconds))
-        response.set_cookie(cookie_name,token,max_age=session_seconds,httponly=True,secure=request.url.scheme=="https",samesite="strict",path="/")
+        response.set_cookie(cookie_name,token,max_age=session_seconds,httponly=True,secure=is_hosted or request.url.scheme=="https",samesite="strict",path="/")
 
     def project_access(db, project_id, user):
         row = db.execute("SELECT * FROM projects WHERE id=? AND user_id=?",(project_id,user["id"])).fetchone()
@@ -391,6 +412,8 @@ def create_app(data_dir: Path | str | None = None, imagery_service=None, drone_s
 
     @app.post("/api/setup",status_code=201)
     def setup(body: SetupBody, request: Request, response: Response):
+        if is_hosted:
+            raise HTTPException(403,"Hosted accounts are provisioned by the server operator. Sign in with your assigned account.")
         if is_demo:
             raise HTTPException(403,"Account setup is disabled in the public demo. Open a temporary SIH demo workspace instead.")
         name,email = body.name.strip(),body.email.strip().casefold()
@@ -433,7 +456,7 @@ def create_app(data_dir: Path | str | None = None, imagery_service=None, drone_s
     @app.post("/api/logout")
     def logout(request: Request, response: Response):
         user = optional_user(request)
-        if user is not None and not is_demo:
+        if user is not None and drone_service is not None:
             drone_service.disconnect(user["id"])
         token = request.cookies.get(cookie_name)
         if token:
@@ -444,18 +467,23 @@ def create_app(data_dir: Path | str | None = None, imagery_service=None, drone_s
 
     @app.get("/api/drone/status")
     def drone_status(user=Depends(require_user)):
+        if is_hosted:
+            from hosting import unavailable_hosted_drone
+            return unavailable_hosted_drone()
         if is_demo:
             return unavailable_drone()
         return drone_service.status(user["id"])
 
     @app.get("/api/drone/ports")
     def drone_ports(user=Depends(require_user)):
-        if is_demo:
+        if is_demo or is_hosted:
             return {"ports":[]}
         return {"ports":drone_service.ports()}
 
     @app.post("/api/drone/connect",status_code=202)
     async def drone_connect(body: DroneConnectionBody, user=Depends(require_user)):
+        if is_hosted:
+            raise HTTPException(403,"Direct hardware connections are disabled on this server. Use georeferenced imagery or local telemetry.")
         if is_demo:
             raise HTTPException(403,"Physical drone connections are disabled in the public demo. Use the local installation.")
         try:
@@ -467,6 +495,9 @@ def create_app(data_dir: Path | str | None = None, imagery_service=None, drone_s
 
     @app.post("/api/drone/disconnect")
     def drone_disconnect(user=Depends(require_user)):
+        if is_hosted:
+            from hosting import unavailable_hosted_drone
+            return unavailable_hosted_drone()
         if is_demo:
             return unavailable_drone()
         return drone_service.disconnect(user["id"])
@@ -807,7 +838,7 @@ def create_app(data_dir: Path | str | None = None, imagery_service=None, drone_s
         verification_url = None
         if not is_demo:
             token = signed_token(report_id)
-            base = os.environ.get("DRONEMAP_PUBLIC_BASE_URL",str(request.base_url).rstrip("/")).rstrip("/")
+            base = canonical_origin or os.environ.get("DRONEMAP_PUBLIC_BASE_URL",str(request.base_url).rstrip("/")).rstrip("/")
             verification_url = f"{base}/report/{token}"
         try:
             document = build_report(snapshot,verification_url,ROOT)
