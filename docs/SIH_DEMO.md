@@ -1,5 +1,8 @@
 # SIH demonstration: one survey, end to end
 
+For the published GitHub Pages browser application, follow [SIH_BROWSER.md](SIH_BROWSER.md).
+The walkthrough below covers the optional Python server edition.
+
 **Problem:** SIH26012 — AI-Based Automated Urban Parcel Mapping and Cadastral
 Feature Extraction System using Drone Imagery. **Team:** GeoVision, 171712.
 The title above comes from the team's supplied brief. Check the full official

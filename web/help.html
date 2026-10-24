@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DroneMap AI · Browser workspace guide</title>
+  <style>
+    :root{color-scheme:dark;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#0b1820;color:#e5f0f0;line-height:1.65}
+    body{margin:0}main{max-width:850px;margin:auto;padding:40px 24px 64px}a{color:#76dfc3}h1,h2{line-height:1.25;color:#fff}h1{font-size:2rem;margin-top:24px}h2{font-size:1.2rem;margin-top:32px}p,li{color:#c3d4da}li{margin:8px 0}strong{color:#eff9f7}.notice{border:1px solid #2c675f;border-radius:12px;background:#102b2d;padding:16px 20px}.back{display:inline-block;border:1px solid #398c7b;border-radius:8px;padding:9px 16px;text-decoration:none}small{color:#a5bbc3}code{color:#c7f2e7}footer{border-top:1px solid #28434e;padding-top:20px;margin-top:36px}
+  </style>
+</head>
+<body><main>
+  <a class="back" href="./">← Open mapping workspace</a>
+  <h1>DroneMap AI workspace guide</h1>
+  <p>GeoVision · SIH26012 · The real Building segmentation model runs on this device. No account or password is needed in this browser edition.</p>
+  <div class="notice"><strong>Saved in this browser, on this device.</strong> Projects, imagery, records and history are not synchronized to a cloud account. Export records regularly and keep original images separately. Clearing site data, private browsing or browser storage eviction can remove the workspace.</div>
+
+  <h2>Map, detect, review, export</h2>
+  <ol>
+    <li>Create or select a project. Navigate to a neighborhood and draw a small scan rectangle.</li>
+    <li>Run detection. The first scan downloads the actual model and WebAssembly runtime; speed depends on your device.</li>
+    <li>Inspect each proposed roof. Edit vertices, remove false positives and draw missing boundaries. Add notes and save the records you reviewed.</li>
+    <li>In <strong>Registry</strong>, inspect saved versions, check overlaps and export GeoJSON or CSV. Open a saved feature to download its <strong>Survey PDF</strong>.</li>
+    <li>Reload and reopen the workspace to confirm saved records remain. Keep exports before changing browsers or devices.</li>
+  </ol>
+  <p>Building outlines do not establish ownership parcels. Confidence is a model score, not independently measured accuracy. A reviewed record records your action in this workspace; it is not approval by an authority.</p>
+
+  <h2>Import a source image</h2>
+  <p>Use <strong>Sources</strong> to import a georeferenced unsigned 8-bit RGB GeoTIFF in EPSG:4326, EPSG:3857 or WGS84 UTM. A PNG/JPEG needs known WGS84 west, south, east and north bounds. Inspect the metadata and preview before scanning.</p>
+  <ul>
+    <li>Imports: up to <strong>32 MiB, 16 million pixels and 16 native inference windows</strong>. Crop larger imagery with GIS software first.</li>
+    <li>Map acquisition: at most <strong>500 m per side</strong> and a <strong>2,048-pixel export edge</strong>. Select a smaller area when requested.</li>
+    <li>Detection uses native image detail; display previews may be resampled. Unsupported inputs produce an error.</li>
+  </ul>
+  <p>A GeoTIFF is not proof of drone capture or ground accuracy. Raw overlapping drone photos need an external orthomosaic/orthorectification workflow first. This application does not stitch raw photos or reliably place an unreferenced screenshot.</p>
+
+  <h2>Drone survey planning</h2>
+  <p>Draw a rectangular or convex area, open <strong>Drone</strong>, and enter the intended altitude, speed, overlap and actual camera specifications. Preview a coverage route and download the QGroundControl <code>.plan</code> for ground-station review.</p>
+  <p>This browser edition does not connect to aircraft telemetry, arm, fly, upload missions or trigger a camera. The route is a preview using a PX4 multirotor template. Set the actual vehicle, firmware and home elevation, configure camera triggering and complete the takeoff/return/landing workflow in a compatible ground station. Estimates assume level terrain and exclude obstacles, wind, turns and battery reserve. Hardware capture still needs field testing.</p>
+
+  <h2>Keep useful copies</h2>
+  <p>GeoJSON/CSV preserve feature records; keep PDFs and original imagery separately. These exports do not restore the complete browser database, images or edit history. Reimported GeoJSON opens reference drafts for review. Full browser-workspace backup/restore and cross-device sync are not implemented.</p>
+  <p>Survey PDFs are unsigned local records with available source/version information. They have no public verification QR and are not title deeds or government certificates.</p>
+
+  <h2>Before presenting at SIH</h2>
+  <p>Use permitted sample imagery. Load the app and finish a real scan on the presenting computer before judges arrive. Show a corrected outline, a saved record, a PDF/GIS export, successful reload and the route preview. Keep exported files and a recorded walkthrough for fallback. Internet is needed to load the app/model and fetch online imagery/search; browser caching is not a guaranteed offline installation.</p>
+  <p>Be clear about the next validation steps: independent local reference labels, authoritative parcel evidence and a real drone field test. A passing software test or high confidence value does not establish mapping accuracy.</p>
+  <footer><small><a href="https://github.com/k-m-rahaman/DroneMap_AI_2.0/blob/main/docs/SIH_BROWSER.md">Detailed browser guide</a> · <a href="https://github.com/k-m-rahaman/DroneMap_AI_2.0/blob/main/docs/ACCURACY.md">Accuracy evaluation</a> · <a href="./">Return to DroneMap AI</a></small></footer>
+</main></body>
+</html>

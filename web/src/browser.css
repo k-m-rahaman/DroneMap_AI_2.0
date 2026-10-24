@@ -1,0 +1,8 @@
+.browser-workspace .workspace.view-active{grid-template-rows:72px auto minmax(0,1fr)}
+.browser-workspace .workspace-rail{grid-row:1/4}
+.browser-workspace .workspace-body{grid-row:3}
+.browser-workspace #officerNameInput,.browser-workspace #pinInput{display:none}
+@media(max-width:760px){
+ .browser-workspace .workspace.view-active{grid-template-rows:62px auto minmax(0,1fr) 61px}
+ .browser-workspace .workspace-rail{grid-row:4}
+}

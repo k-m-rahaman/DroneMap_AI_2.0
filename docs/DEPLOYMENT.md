@@ -1,29 +1,50 @@
-# Run locally and share a temporary demonstration
+# Publish the browser app or run the optional Python edition
 
-The full application requires a running Python process, model runtime and
-workspace storage. GitHub stores the source. GitHub Pages can host static pages;
-it cannot execute this FastAPI/Torch application.
+The [public SIH app](https://k-m-rahaman.github.io/DroneMap_AI_2.0/) is a static
+browser application. Its real segmentation model runs on the visitor's device
+with ONNX Runtime Web, and its projects/images/records persist in that browser
+with IndexedDB. It requires no separate Python server, Firebase account or
+laptop tunnel. See [SIH_BROWSER.md](SIH_BROWSER.md) for use and limitations.
 
-No permanent public hosting service is bundled. The zero-additional-service-fee
-demonstration uses the team's existing computer and a temporary HTTPS tunnel.
-Its availability depends on that computer, internet connection and tunnel.
+The separate Python edition uses FastAPI/Torch, SQLite, account authentication
+and optional MAVLink telemetry. GitHub Pages cannot execute that backend; run
+it locally or deploy it to a suitable server using the instructions below.
 
-## Public project page
+## Public browser application on GitHub Pages
 
-`docs/index.html` is a static introduction with source, download, walkthrough
-and accuracy-evaluation links. To serve it with GitHub Pages, choose **Deploy
-from a branch**, **main** and **/docs** in the repository's Pages settings.
-This publishes the project page; the Python backend still needs the separate
-local or temporary-demo process described below.
+The Pages Actions workflow installs the pinned dependencies in `web/`, runs
+browser-module tests, builds `web/dist/` and publishes that directory. The build
+reuses the existing interface and includes the ONNX model, WASM runtime and
+vendored mapping controls. Select **GitHub Actions** as the repository's Pages
+source. The former **main /docs** branch deployment publishes the old project
+introduction instead of this working browser app.
 
-After verifying a new temporary HTTPS session, update the `data-live-demo-url`
-attribute on the page's `live-demo` link and the current demo link in README.md.
-The button stays in its availability state while that attribute is empty.
-Remove an expired session URL after the demonstration; a static page cannot
-guarantee that a tunnel is still running. The source download remains useful
-when no live session is available.
+To build the browser edition locally with the Node/pnpm versions declared in
+the Pages workflow:
 
-## Private installation
+```sh
+cd web
+pnpm install --frozen-lockfile
+pnpm test
+pnpm build
+```
+
+Serve `web/dist/` over HTTP under `/DroneMap_AI_2.0/`, or set
+`DRONEMAP_WEB_BASE=/` before building when serving at an origin's root. Do not
+open the output with a `file://` URL. The model/WASM files must remain alongside
+the built application at their generated paths. Browser data belongs to the
+origin/browser profile; switching to another hostname or browser does not
+carry projects across.
+
+This deployment is intended for a working SIH prototype. Map acquisition and
+search use external providers and need internet; the first load/scan downloads
+the model and runtime. No guaranteed offline installation, uptime, shared
+account storage or cross-device sync is supplied. Keep GIS exports and original
+imagery separately. Pages' static hosting does not receive saved projects via
+an application backend, while map/search providers still receive their normal
+requests.
+
+## Optional private Python installation
 
 Use 64-bit Python 3.10–3.12 (3.12 recommended). On Windows, run
 `start-with-ai.bat` for all capabilities, `start-with-drone.bat` for core plus

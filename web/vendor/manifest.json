@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "note": "Pinned upstream assets are stored unmodified, with original license notices. The maintenance script is optional; browser startup reads local assets.",
+  "assets": [
+    {
+      "file": "tailwind-3.4.17.js",
+      "package": "tailwindcss",
+      "version": "3.4.17",
+      "bytes": 407279,
+      "sha256": "176e894661aa9cdc9a5cba6c720044cbbf7b8bd80d1c9a142a7c24b1b6c50d15",
+      "source": "https://cdn.tailwindcss.com/3.4.17",
+      "license": "Tailwind-LICENSE.txt"
+    },
+    {
+      "file": "Tailwind-LICENSE.txt",
+      "package": "tailwindcss",
+      "version": "3.4.17",
+      "bytes": 1071,
+      "sha256": "60e0b68c0f35c078eef3a5d29419d0b03ff84ec1df9c3f9d6e39a519a5ae7985",
+      "source": "https://raw.githubusercontent.com/tailwindlabs/tailwindcss/v3.4.17/LICENSE",
+      "license": "Tailwind-LICENSE.txt"
+    },
+    {
+      "file": "turf-6.5.0.min.js",
+      "package": "@turf/turf",
+      "version": "6.5.0",
+      "bytes": 604610,
+      "sha256": "d00f3e8ff8a8f9c103dad61c2fd4bb58143e1404aadfdf09e29b6db1a2de0a3f",
+      "source": "https://registry.npmjs.org/@turf/turf/-/turf-6.5.0.tgz#package/turf.min.js",
+      "license": "Turf-LICENSE.txt"
+    },
+    {
+      "file": "Turf-LICENSE.txt",
+      "package": "@turf/turf",
+      "version": "6.5.0",
+      "bytes": 1073,
+      "sha256": "f9b32b82fd5a1d3a990526d86da97f42fb805d9f4d9f978125c4679b674fce44",
+      "source": "https://registry.npmjs.org/@turf/turf/-/turf-6.5.0.tgz#package/LICENSE",
+      "license": "Turf-LICENSE.txt"
+    },
+    {
+      "file": "Control.Geocoder-4.0.0.js",
+      "package": "leaflet-control-geocoder",
+      "version": "4.0.0",
+      "bytes": 26555,
+      "sha256": "dc9a289e2d8806f6a8c1f4043635cd6ffe52a16a1506a2c524ba3d7393948a07",
+      "source": "https://registry.npmjs.org/leaflet-control-geocoder/-/leaflet-control-geocoder-4.0.0.tgz#package/dist/Control.Geocoder.js",
+      "license": "Geocoder-LICENSE.txt"
+    },
+    {
+      "file": "Control.Geocoder.js.map",
+      "package": "leaflet-control-geocoder",
+      "version": "4.0.0",
+      "bytes": 103799,
+      "sha256": "3bfc6baf83a4cc6643c37e0db7b49652ce42b8f0064285b71af37b59546307b9",
+      "source": "https://registry.npmjs.org/leaflet-control-geocoder/-/leaflet-control-geocoder-4.0.0.tgz#package/dist/Control.Geocoder.js.map",
+      "license": "Geocoder-LICENSE.txt"
+    },
+    {
+      "file": "Control.Geocoder-4.0.0.css",
+      "package": "leaflet-control-geocoder",
+      "version": "4.0.0",
+      "bytes": 3323,
+      "sha256": "bebe4824ed05e8b806bbe9b1bdeb45313e3398314a8060809ae3e8833a1ca4f8",
+      "source": "https://registry.npmjs.org/leaflet-control-geocoder/-/leaflet-control-geocoder-4.0.0.tgz#package/dist/Control.Geocoder.css",
+      "license": "Geocoder-LICENSE.txt"
+    },
+    {
+      "file": "Geocoder-LICENSE.txt",
+      "package": "leaflet-control-geocoder",
+      "version": "4.0.0",
+      "bytes": 1362,
+      "sha256": "85024aa4a2297a03b86e5cb61fb7e5a53567ac486fa3097c21b222bea5b19aa3",
+      "source": "https://registry.npmjs.org/leaflet-control-geocoder/-/leaflet-control-geocoder-4.0.0.tgz#package/LICENSE",
+      "license": "Geocoder-LICENSE.txt"
+    },
+    {
+      "file": "ONNXRuntime-LICENSE.txt",
+      "package": "onnxruntime",
+      "version": "1.30.0",
+      "bytes": 1073,
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c",
+      "source": "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.30.0/LICENSE",
+      "license": "ONNXRuntime-LICENSE.txt"
+    },
+    {
+      "file": "ONNXRuntime-ThirdPartyNotices.txt",
+      "package": "onnxruntime",
+      "version": "1.30.0",
+      "bytes": 338088,
+      "sha256": "143764b952fdb1a7c69ce653bfba74a7744d6a8a573bfb73e235fba356c83de3",
+      "source": "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.30.0/ThirdPartyNotices.txt",
+      "license": "ONNXRuntime-ThirdPartyNotices.txt"
+    },
+    {
+      "file": "Ultralytics-AGPL-3.0.txt",
+      "package": "ultralytics",
+      "version": "model-license-notice",
+      "bytes": 34523,
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "source": "https://raw.githubusercontent.com/ultralytics/ultralytics/main/LICENSE",
+      "license": "Ultralytics-AGPL-3.0.txt"
+    }
+  ]
+}

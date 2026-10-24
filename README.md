@@ -2,19 +2,21 @@
 
 **SIH26012 · AI-Based Automated Urban Parcel Mapping and Cadastral Feature Extraction System using Drone Imagery**
 
-<!-- LIVE_DEMO_LINK -->
-**[Open the live SIH demo](https://brakes-bag-acrobat-bandwidth.trycloudflare.com)** · [Project page](https://k-m-rahaman.github.io/DroneMap_AI_2.0/)
+**[Open DroneMap AI](https://k-m-rahaman.github.io/DroneMap_AI_2.0/)** · [Browser workspace guide](docs/SIH_BROWSER.md)
 
-The live app is a temporary, free laptop-hosted demonstration. Keep the demo process and internet connection running; restarting creates a new address. Use sample data only. The downloadable source and project page remain available when the live session ends.
+The SIH browser edition runs the real Building segmentation model on your device with ONNX Runtime Web. Open the link, select **Open mapping workspace**, and use a small map area or import georeferenced imagery. No account, password, Python server, Firebase setup or running laptop tunnel is needed to use the published browser app. Internet is needed to load the app/model and acquire online map imagery.
 
-DroneMap AI is GeoVision's building-survey and parcel-review workspace. It detects individual roof footprints from satellite imagery or georeferenced orthomosaics, lets a surveyor correct and review boundaries, and produces versioned survey records and GIS exports. A dedicated drone section reads compatible MAVLink telemetry and prepares a coverage route for review in a ground station.
+Projects, original imported images, saved boundaries and edit history stay in **this browser on this device**, using IndexedDB. They are not synchronized to a cloud account. Export GeoJSON/CSV and survey PDFs, and keep your original imagery separately: clearing site data, private browsing, device loss or browser eviction can remove the workspace. GIS exports preserve records; they are not a full workspace/database backup.
+
+DroneMap AI is GeoVision's building-survey and parcel-review workspace. It detects individual roof footprints from satellite imagery or georeferenced orthomosaics, lets a surveyor correct and review boundaries, and produces versioned survey records and GIS exports. The browser's **Drone** section prepares a coverage route and QGroundControl `.plan`; compatible live MAVLink telemetry is available only in the separate local Python installation.
 
 **Prototype scope:** detected roofs are building features, not automatically verified ownership parcels. The supplied model has not been retrained in this release, and no independently measured local accuracy is claimed. Physical drone capture still requires hardware integration and a field test. The team's problem title is supplied context; full official requirements must be checked separately.
 
 | Start here | Purpose |
 | --- | --- |
+| [Use the free SIH browser app](docs/SIH_BROWSER.md) | Map/image detection, boundary review, local saving, exports and presentation limits |
 | [Five-minute SIH walkthrough](docs/SIH_DEMO.md) | Rehearsal, success criteria, truthful capability limits and offline fallback |
-| [Installation and public demo](docs/DEPLOYMENT.md) | Portable setup, separate guest demo and temporary HTTPS link |
+| [Deployment and optional local installation](docs/DEPLOYMENT.md) | GitHub Pages browser build, Python setup and an optional temporary server demo |
 | [Full authenticated server app](docs/HOSTED_APP.md) | Persistent Docker deployment, private account bootstrap, HTTPS and a free-VM option |
 | [Accuracy evaluation](docs/ACCURACY.md) | Independent labels, geographic splits and reproducible metrics |
 | [Independent labeling workspace](docs/BENCHMARK_WORKFLOW.md) | Freeze an AOI and raw proposals; require independent labels and review before scoring |
@@ -25,11 +27,23 @@ DroneMap AI is GeoVision's building-survey and parcel-review workspace. It detec
 | --- | --- |
 | Multiple-building segmentation with confidence, native image windows and spatial duplicate checks | Needs representative labeled imagery to establish accuracy |
 | Manual boundary editing, parcel GeoJSON imports and overlap review | Does not infer legal ownership from roof appearance |
-| Recoverable drafts, saved versions, PDF/CSV/GeoJSON and private backup/restore | Single-owner private workspaces; team invitations and independent approval roles are not implemented |
-| MAVLink UDP/TCP/serial telemetry and QGroundControl route export | Read-only adapter; no arming, camera capture, mission upload or actual flight execution |
-| Opt-in public guest demonstration with isolated disposable workspaces | Temporary laptop-hosted link; no permanent hosted-service or retention guarantee |
+| Saved versions and PDF/CSV/GeoJSON in the browser | Device-local storage; no cloud account, sharing, independent approval roles or complete browser-workspace backup/restore |
+| Survey coverage preview and QGroundControl route export | No arming, camera capture, mission upload or actual flight execution |
+| Optional Python installation with SQLite, private backup/restore and MAVLink telemetry | Requires a separate running server; telemetry is a read-only adapter requiring compatible hardware |
 
-## Start the application
+## Use the SIH browser app
+
+1. Open **[DroneMap AI](https://k-m-rahaman.github.io/DroneMap_AI_2.0/)** in a current desktop browser and select **Open mapping workspace**.
+2. Create/select a project, navigate to a neighborhood, then draw a small scan rectangle. Map scans support up to 500 m per side and a 2,048-pixel export edge; select a smaller area when requested.
+3. Run detection and allow the first model/runtime download to finish. Inspect each proposed roof, edit vertices, add notes and save the records you reviewed. Confidence is a model score, not measured accuracy.
+4. In **Registry**, export GeoJSON/CSV and a saved feature's **Survey PDF**. Reload the app once to confirm the records remain in the same browser.
+5. In **Sources**, import an unsigned 8-bit RGB GeoTIFF in EPSG:4326, EPSG:3857 or WGS84 UTM, or a PNG/JPEG with known bounds. Browser imports support up to 32 MiB, 16 million pixels and 16 native inference windows; crop larger files in GIS software first.
+
+The published app uses the existing `best.pt` model converted to ONNX. Actual masks become individual building outlines; missing imagery/model/runtime and unsupported input produce errors rather than substituted detections. Browser PDFs are unsigned local survey records with source/version details and no public verification QR. The drone planner is a preview, and importing a GeoTIFF does not prove it came from a drone. See [the browser guide](docs/SIH_BROWSER.md) for preparation, limits and recovery.
+
+The sections below describe the **optional Python server edition**. Its account setup, SQLite storage, larger image limits, signed reports and hardware access do not apply to the public browser workspace.
+
+## Optional Python server installation
 
 Version **4.2.0** adds an opt-in public demonstration to the native-image survey workspace. It includes recoverable drafts, spatial duplicate checks, parcel-reference imports, overlap review and a repeatable accuracy evaluator. Query `/api/status` for the running release version.
 
@@ -49,15 +63,15 @@ The portable launchers create `.venv/` and install dependencies on first setup. 
 
 For Linux/macOS or manual setup, see [DEPLOYMENT.md](docs/DEPLOYMENT.md). After installing requirements in an activated virtual environment, the normal launch command is `python -m uvicorn main:app --host 127.0.0.1 --port 8000`. Keep private data out of source control.
 
-## Show a public SIH demo
+## Optional temporary Python server demo
 
 On Windows, double-click **`Run_SIH_Demo.bat`**. It prepares the AI environment, starts an isolated demo on port 8003, and opens an accountless Cloudflare Quick Tunnel. The first download of the official `cloudflared` executable is checked against the release SHA256 digest. Share the printed HTTPS address; its current value is also stored locally in `.demo-runtime/public-url.txt`. Internet is needed for first setup and the tunnel. Use **Ctrl+C** to stop the demo and its owned processes.
 
-GitHub contains the source; it does not run this Python/Torch backend. Guests receive isolated demonstration workspaces, and physical telemetry connection/port access is disabled. Public-demo PDFs omit public verification QR links. PDFs and exports still contain the visitor's supplied sample fields; they do not anonymize the input. Never tunnel the real private workspace or use confidential data in the demonstration.
+GitHub Pages runs the separate browser edition; it does not run this Python/Torch backend. The tunnel is an optional way to demonstrate that server edition. Guests receive isolated demonstration workspaces, and physical telemetry connection/port access is disabled. Public-demo PDFs omit public verification QR links. PDFs and exports still contain the visitor's supplied sample fields; they do not anonymize the input. Never tunnel the real private workspace or use confidential data in the demonstration.
 
 Follow [the public-demo instructions](docs/DEPLOYMENT.md#temporary-public-demonstration). The URL works only while the demo server, tunnel, laptop and internet remain available. Restarting the tunnel changes the URL. The full private app stays available locally with existing accounts and surveys.
 
-## Map and review a survey
+## Map and review a survey in the Python edition
 
 1. Sign in and choose a project in the header. Create a project for a new ward, village or survey area, or edit the selected project's name, location and description.
 2. Use **Map** to navigate to the area. Draw a rectangle to select the scan area, or scan the current visible neighborhood. Set the confidence and minimum building area before running detection.
@@ -73,7 +87,7 @@ Map scans pass proposals through spatial reconciliation against saved and curren
 
 Use **Registry → Import parcels** to preview a WGS84 GeoJSON FeatureCollection (1–1,000 features, at most 8 MiB). The app recalculates measurements, retains a reference/parcel ID, and opens every imported boundary as an unsaved parcel draft. Legacy projected GeoJSON must be reprojected first. Imported labels/claimants are supplied evidence, not verified ownership; check the source before saving/reviewing.
 
-## Import drone imagery
+## Import drone imagery in the Python edition
 
 In **Sources**, choose or drop a georeferenced GeoTIFF orthomosaic, inspect its source metadata/preview, then run detection on that source. New GeoTIFF imports retain original bytes, native CRS, affine transform and dimensions. Detection reads original-resolution windows; a separate reduced Web Mercator preview serves the map. Declared RGB band ordering, grayscale, alpha/nodata and nonfinite pixels are checked. Masks touching invalid pixels are discarded for review rather than treated as valid roofs. PNG/JPEG imports retain original dimensions after EXIF orientation.
 
@@ -81,7 +95,7 @@ The upload limit remains 64 MiB and 100 million source pixels. A scan processes 
 
 For a north-up JPEG/PNG, enter its known WGS84 bounds in the displayed extent fields: west, south, east, north. The upload limit is 64 MB. A raw oblique photo or an unreferenced screenshot has no reliable ground transform. Process overlapping drone photographs into an orthorectified/georeferenced orthomosaic in your photogrammetry workflow before importing it here. This application does not stitch or orthorectify raw photographs.
 
-## Connect a real drone
+## Connect a real drone in the Python edition
 
 The **Drone** section supports **MAVLink telemetry** from a compatible vehicle/controller, using `pymavlink`. It reads received vehicle data; a connection is only marked connected after vehicle heartbeat data arrives. Battery, GPS, altitude and other fields stay empty when no such messages have been received. This is a real connection adapter, not simulated telemetry, and it does not provide a generic connection to every consumer drone. A proprietary controller that does not expose MAVLink needs its own supported SDK/bridge.
 
@@ -122,6 +136,8 @@ The default launcher binds to `127.0.0.1`. For a hosted team deployment, configu
 With Python available, run `python tools/backup_workspace.py backup --data-dir data --output PATH\survey-backup.zip`. Verify it with `python tools/backup_workspace.py verify --archive PATH\survey-backup.zip`. Restore to a new/empty folder with `python tools/backup_workspace.py restore --archive PATH\survey-backup.zip --data-dir restored-data`. Stop the app before changing its configured data folder. The tool makes a consistent SQLite snapshot, includes referenced imagery and report verification data, checks hashes, relocates image paths, and refuses to overwrite an existing populated folder. These archives contain private accounts/survey data and are not encrypted; keep them out of public source packages. Source ZIPs exclude `data/`.
 
 ## Verification
+
+For the browser edition, run `cd web`, `pnpm install --frozen-lockfile`, `pnpm test` and `pnpm build`. The Pages workflow tests and builds this edition before publication. Browser tests check geometry, raster georeferencing, persistence, segmentation postprocessing and dependency assets; their passing status is not an accuracy score. See [SIH_BROWSER.md](docs/SIH_BROWSER.md) for a real-inference presentation checklist.
 
 Install `requirements-dev.txt` and run `python -m pytest tests -q`, then `node --test tests/*.test.cjs` (Node 22 in CI). GitHub Actions runs these checks using core and MAVLink dependencies without downloading Torch. The suite checks authentication, project ownership, persistent edits/history, geometry calculations, exports, backup integrity, telemetry handling, mission validation and browser state/recovery. Test inference fixtures and loopback transports are explicitly isolated examples, not evidence of detection accuracy or physical drone connectivity.
 

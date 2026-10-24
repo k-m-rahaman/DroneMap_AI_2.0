@@ -6,7 +6,9 @@ complete. Check the full official brief before submitting.
 
 ## Demonstrate what can be verified
 
-Use the five-minute [walkthrough](SIH_DEMO.md). A repeatable
+For the public GitHub Pages application, use the [browser presentation guide](SIH_BROWSER.md).
+It runs real segmentation on the presenting device and saves projects in that browser.
+The server edition also has a five-minute [walkthrough](SIH_DEMO.md). A repeatable
 [offline rehearsal](REHEARSAL.md) exercises imports, actual model inference,
 records, edits/history, exports and route planning with isolated sample data.
 The [benchmark workspace](BENCHMARK_WORKFLOW.md) prepares independent labeling
@@ -63,13 +65,17 @@ and a reviewed status do not establish ownership or government approval.
 **What does the PDF prove?**
 
 It records the saved geometry, calculated measurements, source and record
-version. It is survey evidence, not a title deed. Temporary public-demo PDFs
-omit permanent verification links. Local verification links share the associated
-snapshot with anyone possessing that link.
+version. It is survey evidence, not a title deed. Browser PDFs are unsigned local
+records without public verification links. The optional private Python edition
+can generate verification links that share their snapshot with anyone possessing
+the link.
 
 **What works without internet?**
 
-After dependencies/model installation, an existing georeferenced source can be
+The browser app must load successfully first; caching is not a guaranteed offline
+installation. Maps/search need internet. Keep original imagery and exported
+records separately. In the optional Python edition, after dependencies/model
+installation, an existing georeferenced source can be
 processed locally and saved records can be reviewed/exported. Map fetching and
 the public tunnel need internet. Keep the permitted sample and local installation
 ready before presenting; a cached background map is not guaranteed.
@@ -79,14 +85,18 @@ ready before presenting; a cached background map is not guaranteed.
 The local adapter reads telemetry from compatible MAVLink sources over supported
 UDP, TCP or serial links. Proprietary controllers may need their own supported
 SDK or bridge. No camera capture, arming or flight execution is implemented.
-Physical connections are disabled in public guest mode.
+The public browser edition supports image import and route planning; it has no
+physical aircraft connection. Physical connections are also disabled in the
+optional Python public guest mode.
 
 **Is the hosted app a permanent production service?**
 
-The public project page and source are persistent entry points. The interactive
-demo uses a temporary laptop tunnel with disposable visitor data and limits.
-Production hosting, operations, team approval roles and hardware validation
-remain separate deployment work.
+The public GitHub Pages address runs the browser application with real local
+inference, editing, saving and exports. It does not depend on a laptop tunnel.
+Projects stay in that device's browser; there is no cloud account or shared
+database. The optional Python demo still uses a temporary laptop tunnel.
+Multi-user operations, independent accuracy and hardware validation remain work
+for a production service.
 
 ## What to bring
 

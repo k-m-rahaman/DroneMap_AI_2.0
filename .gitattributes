@@ -1,0 +1,3 @@
+# Preserve upstream byte hashes across Windows and Linux checkouts.
+web/vendor/* -text
+web/models/*.onnx -text
